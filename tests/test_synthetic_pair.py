@@ -115,6 +115,147 @@ def test_wait_one_day_confirmed_signal_opens_next_day():
     assert abs(r["total_payoff"] - 0.50) < TOL
 
 
+def test_same_day_delisting_forces_close_at_last_valid_price():
+    """
+    Delisting a meta' periodo (PROTOCOL.md §1.4/§2.2), posizione APERTA:
+      returns_1 = [+0.20, +0.10, NaN, 0.00], returns_2 = [0.00, -0.05, 0.00, 0.00]
+      sigma=0.05 (soglia=0.10).
+      Giorno1: P1=1.20, P2=1.00, spread=0.20>0.10 -> apre long2/short1.
+      Giorno2: r_long=r2=-0.05, r_short=r1=0.10.
+               payoff = 1*(-0.05) - 1*(0.10) = -0.15.
+               P1=1.20*1.10=1.32, P2=1.00*0.95=0.95, spread=0.37 (nessun
+               crossing naturale: stesso segno di prima).
+      Giorno3: returns_1[2]=NaN -> il titolo 1 delista qui. L'ultimo giorno
+               con prezzi validi per ENTRAMBE le gambe e' il giorno2:
+               la posizione (ancora aperta) si chiude FORZATAMENTE li',
+               reason="delisting", NON al giorno3 ne' a fine periodo (n=4).
+               Il giorno4 (dopo il delisting) non viene proprio processato
+               (il loop si ferma al giorno2): daily_payoff[2]=daily_payoff[3]=0.
+      Totale atteso = 0 (giorno1, apertura) + (-0.15) (giorno2) = -0.15.
+    """
+    returns_1 = np.array([0.20, 0.10, np.nan, 0.00])
+    returns_2 = np.array([0.00, -0.05, 0.00, 0.00])
+    r = simulate_pair_same_day(returns_1, returns_2, sigma=0.05, k=2.0)
+
+    assert len(r["trades"]) == 2
+    open_ev, close_ev = r["trades"]
+    assert open_ev["day"] == 1 and open_ev["direction"] == "long2_short1"
+    assert close_ev["event"] == "close" and close_ev["day"] == 2, \
+        "chiusura forzata al giorno2 = ultimo prezzo valido, non al giorno3 (NaN) ne' a fine periodo"
+    assert close_ev["reason"] == "delisting"
+
+    assert abs(r["daily_payoff"][0] - 0.0) < TOL
+    assert abs(r["daily_payoff"][1] - (-0.15)) < TOL
+    assert abs(r["daily_payoff"][2] - 0.0) < TOL, "giorno3 (post-delisting) non processato: payoff 0"
+    assert abs(r["daily_payoff"][3] - 0.0) < TOL, "giorno4 (post-delisting) non processato: payoff 0"
+    assert abs(r["total_payoff"] - (-0.15)) < TOL
+
+
+def test_same_day_delisting_without_open_position_just_stops():
+    """
+    Delisting SENZA posizione aperta (spread sempre sotto soglia prima del
+    NaN): la coppia smette semplicemente di generare segnali da quel punto,
+    nessun trade, nessun payoff, nessun crash.
+      returns_1 = [0.01, NaN, 0.01], returns_2 = [0.00, 0.00, 0.00], sigma=0.05.
+    """
+    returns_1 = np.array([0.01, np.nan, 0.01])
+    returns_2 = np.array([0.00, 0.00, 0.00])
+    r = simulate_pair_same_day(returns_1, returns_2, sigma=0.05, k=2.0)
+    assert r["trades"] == []
+    assert abs(r["total_payoff"]) < TOL
+
+
+def test_wait_one_day_delisting_forces_close_at_last_valid_price():
+    """
+    Stesso scenario di test_same_day_delisting_forces_close_at_last_valid_price
+    ma con esecuzione wait-one-day (conferma un giorno dopo il segnale):
+      returns_1 = [+0.20, 0.00, +0.10, NaN], returns_2 = [0.00, 0.00, -0.05, 0.00]
+      sigma=0.05 (soglia=0.10).
+      Giorno1: spread=0.20>0.10 -> SEGNALE (non apre).
+      Giorno2: spread invariato (0.20, ancora >0.10) -> CONFERMA, apre
+               long2/short1 al giorno2 (nessun payoff, giorno di apertura).
+      Giorno3: r_long=r2=-0.05, r_short=r1=0.10 -> payoff = -0.05-0.10=-0.15.
+               spread=0.37, nessun crossing naturale.
+      Giorno4: returns_1[3]=NaN -> delisting. Ultimo giorno valido = giorno3:
+               chiusura forzata li' (reason="delisting"), non a fine periodo.
+      Totale atteso = -0.15 (solo giorno3).
+    """
+    returns_1 = np.array([0.20, 0.00, 0.10, np.nan])
+    returns_2 = np.array([0.00, 0.00, -0.05, 0.00])
+    r = simulate_pair_wait_one_day(returns_1, returns_2, sigma=0.05, k=2.0)
+
+    assert len(r["trades"]) == 2
+    open_ev, close_ev = r["trades"]
+    assert open_ev["day"] == 2 and open_ev["signal_day"] == 1
+    assert close_ev["day"] == 3 and close_ev["reason"] == "delisting"
+
+    assert abs(r["daily_payoff"][1] - 0.0) < TOL, "giorno2 = apertura, nessun payoff"
+    assert abs(r["daily_payoff"][2] - (-0.15)) < TOL
+    assert abs(r["daily_payoff"][3] - 0.0) < TOL, "giorno4 (post-delisting) non processato"
+    assert abs(r["total_payoff"] - (-0.15)) < TOL
+
+
+def test_wait_one_day_delisting_without_open_position_just_stops():
+    """Delisting SENZA posizione aperta ne' segnale pending irrisolto:
+    nessun trade, nessun payoff, nessun crash."""
+    returns_1 = np.array([0.01, np.nan, 0.01])
+    returns_2 = np.array([0.00, 0.00, 0.00])
+    r = simulate_pair_wait_one_day(returns_1, returns_2, sigma=0.05, k=2.0)
+    assert r["trades"] == []
+    assert abs(r["total_payoff"]) < TOL
+
+
+def test_same_day_open_on_last_valid_day_closes_same_iteration():
+    """
+    Caso limite scoperto in audit (non specifico al delisting: si presenta
+    anche a fine periodo ordinaria): il segnale scatta SOLO all'ultimo
+    giorno valido del periodo (nessun giorno successivo per marcare a
+    mercato). Senza chiusura forzata nella stessa iterazione, il trade log
+    conterrebbe un evento "open" MAI abbinato a un "close" (is_open
+    resterebbe True oltre il return della funzione) - un trade fantasma che
+    corromperebbe qualunque diagnostica a valle su round-trip/durata
+    (PROTOCOL.md §2.3). Qui n=2, segnale solo al giorno2:
+      returns_1 = [0.00, 0.20], returns_2 = [0.00, 0.00], sigma=0.05.
+      Giorno1: spread=0, nessun segnale.
+      Giorno2: P1=1.20, P2=1.00, spread=0.20>0.10 -> apre long2/short1 E
+               chiude nella STESSA iterazione (fine periodo, durata zero).
+    Atteso: esattamente 2 eventi (open+close, entrambi al giorno2), payoff
+    totale zero (nessun giorno successivo per marcare a mercato).
+    """
+    returns_1 = np.array([0.00, 0.20])
+    returns_2 = np.array([0.00, 0.00])
+    r = simulate_pair_same_day(returns_1, returns_2, sigma=0.05, k=2.0)
+
+    assert len(r["trades"]) == 2, f"open E close attesi, non un trade fantasma: {r['trades']}"
+    open_ev, close_ev = r["trades"]
+    assert open_ev["event"] == "open" and open_ev["day"] == 2
+    assert close_ev["event"] == "close" and close_ev["day"] == 2
+    assert close_ev["reason"] == "end_of_period"
+    assert abs(r["total_payoff"]) < TOL
+
+
+def test_wait_one_day_open_on_last_valid_day_closes_same_iteration():
+    """
+    Stesso caso limite di test_same_day_open_on_last_valid_day_closes_same_iteration
+    ma con esecuzione wait-one-day: la CONFERMA (non solo il segnale) cade
+    sull'ultimo giorno valido.
+      returns_1 = [0.00, 0.20, 0.20], returns_2 = [0.00, 0.00, 0.00], sigma=0.05.
+      Giorno1: nessun segnale. Giorno2: spread=0.20>0.10 -> SEGNALE (pending).
+      Giorno3 (ultimo giorno, n=3): spread ancora 0.20+0.20=0.44>0.10 ->
+      CONFERMA, apre E chiude nella stessa iterazione (durata zero).
+    """
+    returns_1 = np.array([0.00, 0.20, 0.20])
+    returns_2 = np.array([0.00, 0.00, 0.00])
+    r = simulate_pair_wait_one_day(returns_1, returns_2, sigma=0.05, k=2.0)
+
+    assert len(r["trades"]) == 2, f"open E close attesi, non un trade fantasma: {r['trades']}"
+    open_ev, close_ev = r["trades"]
+    assert open_ev["event"] == "open" and open_ev["day"] == 3 and open_ev["signal_day"] == 2
+    assert close_ev["event"] == "close" and close_ev["day"] == 3
+    assert close_ev["reason"] == "end_of_period"
+    assert abs(r["total_payoff"]) < TOL
+
+
 def test_wait_one_day_missed_opportunity_reverts_before_execution():
     """
     Segnale al giorno1 (spread=0.20>0.10), ma al giorno2 lo spread e' gia'
@@ -143,6 +284,12 @@ if __name__ == "__main__":
     test_no_signal_no_trade()
     test_wait_one_day_confirmed_signal_opens_next_day()
     test_wait_one_day_missed_opportunity_reverts_before_execution()
+    test_same_day_delisting_forces_close_at_last_valid_price()
+    test_same_day_delisting_without_open_position_just_stops()
+    test_wait_one_day_delisting_forces_close_at_last_valid_price()
+    test_wait_one_day_delisting_without_open_position_just_stops()
+    test_same_day_open_on_last_valid_day_closes_same_iteration()
+    test_wait_one_day_open_on_last_valid_day_closes_same_iteration()
     print("Tutti i test sintetici PASSATI.")
     print("  Episodio 1 (crossing close):        total_payoff =", 11/60)
     print("  Episodio 2 (end-of-period, compound): total_payoff =", 0.229)

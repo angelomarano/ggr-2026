@@ -22,6 +22,25 @@ def build_price_index(returns: np.ndarray) -> np.ndarray:
     return P
 
 
+def _last_valid_day(returns_1: np.ndarray, returns_2: np.ndarray) -> int:
+    """
+    Ultimo giorno (1-indexed) in cui ENTRAMBE le gambe hanno un rendimento
+    valido (PROTOCOL.md §1.4/§2.2: un titolo che delista a meta' trading
+    period smette di avere prezzi, non di generare rumore).
+
+    Se returns_1 o returns_2 hanno un NaN a partire dalla posizione 0-indexed
+    m, il prezzo del giorno m+1 e' indefinito per quella gamba: l'ultimo
+    giorno con prezzi validi per ENTRAMBE le gambe e' il giorno m (1-indexed)
+    — che coincide numericamente con la posizione 0-indexed del primo NaN,
+    perche' returns[j] e' il rendimento che porta da P[j] a P[j+1].
+    Nessun NaN -> l'intero periodo e' valido, ritorna n.
+    """
+    nan_mask = np.isnan(returns_1) | np.isnan(returns_2)
+    if not nan_mask.any():
+        return len(returns_1)
+    return int(np.argmax(nan_mask))
+
+
 def simulate_pair_same_day(
     returns_1: np.ndarray,
     returns_2: np.ndarray,
@@ -37,11 +56,20 @@ def simulate_pair_same_day(
     sigma: deviazione standard dello spread stimata SUL FORMATION (esterna).
     k: soglia in deviazioni standard (default 2, congelato da protocollo).
 
+    Delisting a meta' periodo (un NaN in returns_1/returns_2 da un certo
+    giorno in poi, PROTOCOL.md §1.4/§2.2): se una posizione e' aperta
+    quando i prezzi finiscono, si chiude forzatamente all'ULTIMO prezzo
+    valido (evento "close", reason="delisting"); se non e' aperta, la
+    coppia smette semplicemente di generare segnali da quel giorno in poi
+    (il loop si ferma li', nessun trade successivo e' possibile senza
+    prezzi validi per entrambe le gambe).
+
     Ritorna: P1, P2, spread (indice 0..n), daily_payoff (indice 0..n-1,
     payoff realizzato il giorno t+1), trade log, payoff cumulato.
     """
     n = len(returns_1)
     assert len(returns_2) == n, "le due serie devono avere la stessa lunghezza"
+    last_day = _last_valid_day(returns_1, returns_2)
 
     P1 = build_price_index(returns_1)
     P2 = build_price_index(returns_2)
@@ -54,7 +82,7 @@ def simulate_pair_same_day(
     daily_payoff = np.zeros(n)
     trades: list[dict] = []
 
-    for t in range(1, n + 1):
+    for t in range(1, last_day + 1):
         if is_open:
             if long_leg == 2:
                 r_long, r_short = returns_2[t - 1], returns_1[t - 1]
@@ -66,10 +94,10 @@ def simulate_pair_same_day(
             w_short *= 1 + r_short
 
             crossed = (spread[t] == 0) or (np.sign(spread[t]) != np.sign(spread[t - 1]))
-            if crossed or t == n:
+            if crossed or t == last_day:
+                reason = "crossing" if crossed else ("delisting" if last_day < n else "end_of_period")
                 trades.append({
-                    "event": "close", "day": t, "spread": spread[t],
-                    "reason": "crossing" if crossed else "end_of_period",
+                    "event": "close", "day": t, "spread": spread[t], "reason": reason,
                 })
                 is_open, long_leg = False, None
             continue
@@ -80,6 +108,18 @@ def simulate_pair_same_day(
         elif spread[t] < -threshold:
             is_open, long_leg, w_long, w_short = True, 1, 1.0, 1.0
             trades.append({"event": "open", "day": t, "direction": "long1_short2", "spread": spread[t]})
+
+        if is_open and t == last_day:
+            # Apertura nell'ULTIMO giorno valido (fine periodo o delisting):
+            # nessun giorno successivo per marcare a mercato la posizione,
+            # quindi si chiude nella STESSA iterazione (durata zero, payoff
+            # zero) invece di lasciare un "open" senza "close" abbinato nel
+            # trade log (bug: senza questo, is_open resterebbe True oltre il
+            # return della funzione e round-trip/durata a valle sarebbero
+            # calcolati su un trade fantasma mai chiuso).
+            reason = "delisting" if last_day < n else "end_of_period"
+            trades.append({"event": "close", "day": t, "spread": spread[t], "reason": reason})
+            is_open, long_leg = False, None
 
     return {
         "P1": P1, "P2": P2, "spread": spread,
@@ -109,12 +149,20 @@ def simulate_pair_wait_one_day(
 
     returns_1, returns_2, sigma, k: vedi simulate_pair_same_day.
 
+    Delisting a meta' periodo: stessa gestione di simulate_pair_same_day
+    (vedi la sua docstring) — chiusura forzata all'ultimo prezzo valido se
+    una posizione e' aperta, altrimenti la coppia smette semplicemente di
+    generare segnali (e un eventuale segnale "pending" in attesa di
+    conferma scade silenziosamente, non diversamente da un segnale mai
+    confermato entro la fine ordinaria del periodo).
+
     Ritorna: stesso schema di simulate_pair_same_day; gli eventi "open"
     portano anche "signal_day" (il giorno in cui il segnale e' stato
     osservato, un giorno prima dell'apertura).
     """
     n = len(returns_1)
     assert len(returns_2) == n, "le due serie devono avere la stessa lunghezza"
+    last_day = _last_valid_day(returns_1, returns_2)
 
     P1 = build_price_index(returns_1)
     P2 = build_price_index(returns_2)
@@ -128,7 +176,7 @@ def simulate_pair_wait_one_day(
     daily_payoff = np.zeros(n)
     trades: list[dict] = []
 
-    for t in range(1, n + 1):
+    for t in range(1, last_day + 1):
         if is_open:
             if long_leg == 2:
                 r_long, r_short = returns_2[t - 1], returns_1[t - 1]
@@ -140,10 +188,10 @@ def simulate_pair_wait_one_day(
             w_short *= 1 + r_short
 
             crossed = (spread[t] == 0) or (np.sign(spread[t]) != np.sign(spread[t - 1]))
-            if crossed or t == n:
+            if crossed or t == last_day:
+                reason = "crossing" if crossed else ("delisting" if last_day < n else "end_of_period")
                 trades.append({
-                    "event": "close", "day": t, "spread": spread[t],
-                    "reason": "crossing" if crossed else "end_of_period",
+                    "event": "close", "day": t, "spread": spread[t], "reason": reason,
                 })
                 is_open, long_leg = False, None
             continue
@@ -157,6 +205,13 @@ def simulate_pair_wait_one_day(
                     "spread": spread[t], "signal_day": pending["signal_day"],
                 })
                 pending = None
+                if t == last_day:
+                    # Vedi commento in simulate_pair_same_day: apertura
+                    # nell'ultimo giorno valido -> chiusura nella stessa
+                    # iterazione, nessun "open" senza "close" abbinato.
+                    reason = "delisting" if last_day < n else "end_of_period"
+                    trades.append({"event": "close", "day": t, "spread": spread[t], "reason": reason})
+                    is_open, long_leg = False, None
                 continue
             if direction == "long1_short2" and spread[t] < -threshold:
                 is_open, long_leg, w_long, w_short = True, 1, 1.0, 1.0
@@ -165,6 +220,10 @@ def simulate_pair_wait_one_day(
                     "spread": spread[t], "signal_day": pending["signal_day"],
                 })
                 pending = None
+                if t == last_day:
+                    reason = "delisting" if last_day < n else "end_of_period"
+                    trades.append({"event": "close", "day": t, "spread": spread[t], "reason": reason})
+                    is_open, long_leg = False, None
                 continue
             trades.append({
                 "event": "missed", "day": t, "direction": direction,

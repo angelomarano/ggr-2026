@@ -28,7 +28,14 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 
-from src.inference import factor_regression, newey_west_mean_test, stationary_bootstrap_ci
+from src.inference import (
+    decile_matched_bootstrap_pairs,
+    decile_of_returns,
+    factor_regression,
+    long_short_leg_regression,
+    newey_west_mean_test,
+    stationary_bootstrap_ci,
+)
 
 TOL = 1e-9
 
@@ -172,6 +179,115 @@ def test_factor_regression_drops_months_missing_in_factors():
     assert not np.isnan(out["r_squared"])
 
 
+def test_long_short_leg_regression_recovers_known_drift():
+    """
+    Decomposizione alpha long/short (PROTOCOL.md §2.4, punto 2): costruita
+    con un drift NOTO per costruzione, entro tolleranza (non esatto: c'e'
+    rumore, quindi non e' un caso a mano come il recupero esatto senza
+    rumore di factor_regression, ma il drift iniettato e' comunque noto e
+    la stima deve avvicinarvisi entro una tolleranza dettata dall'errore
+    standard atteso, non entro epsilon numerico).
+
+    200 mesi, rumore idiosincratico std=0.008 (=> SE atteso della media
+    ~0.008/sqrt(200)=0.00057, la tolleranza 0.0015 e' ~2.6 SE, ampiamente
+    sufficiente per un seed fisso):
+      long_returns  = rumore puro attorno a +0.0002 (alpha atteso ~0,
+                      "non significativo" nello spirito di GGR Tabella 7)
+      short_returns = rumore attorno a -0.005 (drift negativo NOTO, atteso
+                      "significativo": e' il leg che genera il profitto
+                      quando lo si shorta)
+    """
+    rng = np.random.default_rng(21)
+    months = pd.date_range("2000-01-01", periods=200, freq="MS")
+    factor_cols = ["Mkt-RF", "SMB", "HML", "Mom", "ST_Rev"]
+    factors = pd.DataFrame(
+        rng.normal(0, 0.02, size=(200, 5)), index=months, columns=factor_cols
+    )
+
+    long_drift = 0.0002
+    short_drift = -0.005
+    long_returns = pd.Series(long_drift + rng.normal(0, 0.008, size=200), index=months)
+    short_returns = pd.Series(short_drift + rng.normal(0, 0.008, size=200), index=months)
+
+    out = long_short_leg_regression(long_returns, short_returns, factors, factor_cols=tuple(factor_cols))
+
+    assert abs(out["long"]["alpha"] - long_drift) < 0.0015
+    assert abs(out["short"]["alpha"] - short_drift) < 0.0015
+    assert out["short"]["alpha"] < out["long"]["alpha"], \
+        "la gamba short deve mostrare il drift negativo, la long deve restare vicina a zero"
+    assert out["long"]["n_obs"] == 200 and out["short"]["n_obs"] == 200
+
+
+def test_decile_of_returns_hand_computed():
+    """
+    Universo fittizio di 20 titoli, rendimenti del mese precedente = 0..19
+    (equispaziati) -> con 10 decili, pd.qcut deve assegnare ESATTAMENTE 2
+    titoli per decile (T00,T01)->decile1, (T02,T03)->decile2, ...,
+    (T18,T19)->decile10. Decili noti a mano, nessuna ambiguita'.
+    """
+    tickers = [f"T{i:02d}" for i in range(20)]
+    prior_returns = pd.Series(np.arange(20, dtype=float), index=tickers)
+    deciles = decile_of_returns(prior_returns, n_deciles=10)
+
+    assert (deciles.value_counts() == 2).all(), "10 decili x 2 titoli ciascuno, nessuno sbilanciato"
+    assert deciles.loc["T00"] == deciles.loc["T01"] == 1
+    assert deciles.loc["T18"] == deciles.loc["T19"] == 10
+    assert deciles.loc["T00"] != deciles.loc["T02"], "decili adiacenti devono restare distinti"
+
+
+def test_decile_matched_bootstrap_respects_decile_constraint():
+    """
+    Falsificazione bootstrap (PROTOCOL.md §2.4, punto 1): su 50 repliche di
+    2 coppie vere, OGNI titolo fittizio sostituito deve appartenere ALLO
+    STESSO decile del titolo vero che rimpiazza — verificato su TUTTE le
+    repliche, non solo in media (il vincolo e' per costruzione, deve valere
+    sempre, non statisticamente).
+    """
+    tickers = [f"T{i:02d}" for i in range(20)]
+    prior_returns = pd.Series(np.arange(20, dtype=float), index=tickers)
+    deciles = decile_of_returns(prior_returns, n_deciles=10)
+
+    selected_pairs = [("T00", "T19"), ("T05", "T14")]  # decile1 e decile10; decile3 e decile8
+    reps = decile_matched_bootstrap_pairs(
+        selected_pairs, prior_returns, n_deciles=10, n_reps=50, seed=0
+    )
+
+    assert len(reps) == 50
+    for rep in reps:
+        assert len(rep) == len(selected_pairs)
+        for (t1_true, t2_true), (t1_fake, t2_fake) in zip(selected_pairs, rep):
+            assert deciles.loc[t1_fake] == deciles.loc[t1_true], \
+                f"{t1_fake} non e' nello stesso decile di {t1_true}"
+            assert deciles.loc[t2_fake] == deciles.loc[t2_true], \
+                f"{t2_fake} non e' nello stesso decile di {t2_true}"
+
+
+def test_decile_matched_bootstrap_reproducible_with_same_seed():
+    """A parita' di seed, l'assegnazione dei titoli fittizi deve essere
+    bit-riproducibile (nessuna sorgente di casualita' non seedata)."""
+    tickers = [f"T{i:02d}" for i in range(20)]
+    prior_returns = pd.Series(np.arange(20, dtype=float), index=tickers)
+    selected_pairs = [("T00", "T19"), ("T05", "T14")]
+
+    reps1 = decile_matched_bootstrap_pairs(selected_pairs, prior_returns, n_reps=30, seed=42)
+    reps2 = decile_matched_bootstrap_pairs(selected_pairs, prior_returns, n_reps=30, seed=42)
+    assert reps1 == reps2
+
+
+def test_decile_matched_bootstrap_singleton_decile_returns_itself():
+    """Caso limite: se n_deciles == n_titoli, ogni titolo e' l'unico membro
+    del proprio decile -> l'unica sostituzione possibile e' il titolo
+    stesso, nessun crash (nessuna alternativa nel pool)."""
+    tickers = [f"T{i:02d}" for i in range(10)]
+    prior_returns = pd.Series(np.arange(10, dtype=float), index=tickers)
+    selected_pairs = [("T02", "T07")]
+
+    reps = decile_matched_bootstrap_pairs(
+        selected_pairs, prior_returns, n_deciles=10, n_reps=20, seed=1
+    )
+    assert all(rep == [("T02", "T07")] for rep in reps)
+
+
 if __name__ == "__main__":
     test_newey_west_mean_matches_direct_statsmodels_call()
     test_newey_west_mean_sign_and_magnitude_sanity()
@@ -181,4 +297,9 @@ if __name__ == "__main__":
     test_factor_regression_exact_recovery_without_noise()
     test_factor_regression_matches_direct_statsmodels_call_with_noise()
     test_factor_regression_drops_months_missing_in_factors()
+    test_long_short_leg_regression_recovers_known_drift()
+    test_decile_of_returns_hand_computed()
+    test_decile_matched_bootstrap_respects_decile_constraint()
+    test_decile_matched_bootstrap_reproducible_with_same_seed()
+    test_decile_matched_bootstrap_singleton_decile_returns_itself()
     print("test_inference: tutti i test PASSATI.")
