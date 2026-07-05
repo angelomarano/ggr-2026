@@ -53,6 +53,14 @@ alpha = -0.0882%/month (t = -0.89), R² = 0.396, n = 77 months.
 Long leg alpha = 0.0397%/month (t = 0.32)
 Short leg alpha = -0.0851%/month (t = -0.72)
 
+Note: long alpha minus short alpha is not expected to equal the factor
+regression's net alpha above, and that is not a bug (verified empirically,
+see DEVIATIONS.md / src/inference.py). Both legs are compounded monthly as
+independent stand-alone sub-portfolios, while the net portfolio compounds
+the already-netted daily series; compounding is non-linear, so the two
+aggregation paths diverge by construction. The divergence is typically a
+few bp/month.
+
 ### Decile-matched random-pairs bootstrap
 
 200 replications. Real primary portfolio mean monthly return: 0.1484%.

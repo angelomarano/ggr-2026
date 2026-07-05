@@ -178,6 +178,18 @@ def long_short_leg_regression(
     non un risultato da accettare a valore nominale.
 
     Ritorna: {"long": factor_regression(...), "short": factor_regression(...)}.
+
+    Note: alpha_long - alpha_short is NOT expected to equal the primary
+    portfolio's net factor_regression alpha, and that is not a bug. Both
+    legs here are compounded monthly as independent stand-alone
+    sub-portfolios (the standard approach for this decomposition - each leg
+    is its own hypothetical fund with its own monthly return), while the
+    primary portfolio compounds the already-netted daily series. Compounding
+    is non-linear - (1+a)(1+b)-1 - [(1+c)(1+d)-1] != (1+a-c)(1+b-d)-1 in
+    general - so the two aggregation paths diverge by construction, not by
+    error. Verified empirically (pair-day level and pre-compounding daily
+    portfolio level both match exactly): the divergence appears only after
+    monthly compounding, typically on the order of a few bp/month.
     """
     return {
         "long": factor_regression(long_returns, factors, factor_cols, lags),

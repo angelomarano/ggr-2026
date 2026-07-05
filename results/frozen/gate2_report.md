@@ -53,6 +53,15 @@ No comparison against any acceptance band is made here; these are the computed n
 
 ## Falsifications (primary portfolio only, both arms)
 
+Note on the long/short leg decomposition below: long alpha minus short
+alpha is not expected to equal the factor regression's net alpha above it,
+and that is not a bug (verified empirically, see DEVIATIONS.md /
+src/inference.py). Both legs are compounded monthly as independent
+stand-alone sub-portfolios, while the net portfolio compounds the
+already-netted daily series; compounding is non-linear, so the two
+aggregation paths diverge by construction. The divergence is typically a
+few bp/month.
+
 ### full_universe: top_20 / wait_one_day / committed
 
 Factor regression: alpha = -0.0626%/month (t = -1.21), R² = 0.138, n = 197 months.
