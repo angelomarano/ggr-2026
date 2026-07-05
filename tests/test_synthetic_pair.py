@@ -51,6 +51,13 @@ def test_episode1_crossing_close():
     assert abs(r["daily_payoff"][0] - 0.0) < TOL, "nessun payoff il giorno di apertura"
     assert abs(r["total_payoff"] - 11 / 60) < TOL
 
+    # long/short leg decomposition: long leg is 2, short leg is 1.
+    # long_contribution = w_long * r2[1] = 1.0 * 0.10 = 0.10
+    # short_contribution = w_short * r1[1] = 1.0 * (-1/12)
+    assert abs(r["daily_long_payoff"][1] - 0.10) < TOL
+    assert abs(r["daily_short_payoff"][1] - (-1 / 12)) < TOL
+    assert abs(r["daily_long_payoff"][1] - r["daily_short_payoff"][1] - expected_payoff_day2) < TOL
+
 
 def test_episode2_weight_compounding_and_end_of_period_close():
     returns_1 = np.array([-0.20, 0.00, 0.30])
@@ -71,6 +78,13 @@ def test_episode2_weight_compounding_and_end_of_period_close():
     assert abs(r["daily_payoff"][0] - 0.0) < TOL
     assert abs(r["daily_payoff"][1] - expected_day2) < TOL
     assert abs(r["daily_payoff"][2] - expected_day3) < TOL
+
+    # long leg is 1, short leg is 2. Long contribution day3 = 1.0*0.30,
+    # short contribution day3 = 1.05*0.02 (weight compounded from day2).
+    assert abs(r["daily_long_payoff"][1] - 0.0) < TOL
+    assert abs(r["daily_short_payoff"][1] - 0.05) < TOL
+    assert abs(r["daily_long_payoff"][2] - 0.30) < TOL
+    assert abs(r["daily_short_payoff"][2] - 1.05 * 0.02) < TOL
     assert abs(r["total_payoff"] - 0.229) < TOL
 
 

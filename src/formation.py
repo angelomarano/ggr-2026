@@ -123,6 +123,57 @@ def select_portfolios(
     }
 
 
+def _load_returns_window(
+    tickers: list[str], start, end, price_dir: Path, require_complete: bool,
+) -> pd.DataFrame:
+    """
+    Shared loader for both formation and trading windows: daily simple
+    returns for `tickers` over every reference trading day in [start, end]
+    inclusive. Uses the reference trading day immediately before `start` as
+    the pct_change anchor, so the result has exactly one row per reference
+    day in [start, end] - not one fewer, which a naive reindex+pct_change
+    over [start, end] alone would give (the first day would have no prior
+    price to compute a return from).
+
+    require_complete=True (formation): a ticker missing from the cache, or
+    with any NaN return in the window, is dropped with a warning (GGR's
+    "no-trade days" filter, PROTOCOL.md §1.2.3).
+    require_complete=False (trading): nothing is dropped for missing data;
+    gaps (mid-period delisting) stay as NaN so src/trading.py's explicit
+    NaN handling applies. A ticker absent from the cache entirely is still
+    skipped (there is nothing to simulate for it).
+    """
+    days = _reference_days(start, end)
+    wide_days = _reference_days(pd.Timestamp(start) - pd.Timedelta(days=20), end)
+    anchor_pos = wide_days.get_indexer([days[0]])[0]
+    if anchor_pos <= 0:
+        raise ValueError(f"no reference trading day before {start} to anchor the first return")
+    full_days = wide_days[anchor_pos - 1 : anchor_pos].append(days)
+
+    prices: dict[str, pd.Series] = {}
+    for t in tickers:
+        p = price_dir / f"{t}.parquet"
+        if not p.exists():
+            if require_complete:
+                warnings.warn(f"{t}: nessun file prezzi in cache, escluso dal formation.")
+            continue
+        s = pd.read_parquet(p, columns=["Adj Close"]).reindex(full_days)["Adj Close"]
+        prices[t] = s
+
+    price_df = pd.DataFrame(prices)
+    # fill_method=None: pandas' default forward-fills NaN prices before
+    # differencing, which would turn a real gap (delisting) into a fake
+    # zero-return day instead of the NaN that must reach trading.py / the
+    # formation completeness filter.
+    returns = price_df.pct_change(fill_method=None).iloc[1:]
+    if require_complete:
+        incomplete = [c for c in returns.columns if returns[c].isna().any()]
+        for t in incomplete:
+            warnings.warn(f"{t}: storico incompleto nel formation period, escluso.")
+        returns = returns.drop(columns=incomplete)
+    return returns
+
+
 def load_formation_returns(
     tickers: list[str], formation_start, formation_end, price_dir: Path = PRICES_DIR,
 ) -> pd.DataFrame:
@@ -135,21 +186,25 @@ def load_formation_returns(
     escluso con un warning (il filtro "no-trade days" dell'universo e'
     responsabilita' di data/prices.py; qui si applica la stessa logica
     localmente, a difesa, sul sotto-insieme di ticker richiesto).
+
+    One row per reference trading day in [formation_start, formation_end]
+    (see _load_returns_window).
     """
-    days = _reference_days(formation_start, formation_end)
-    prices: dict[str, pd.Series] = {}
-    for t in tickers:
-        p = price_dir / f"{t}.parquet"
-        if not p.exists():
-            warnings.warn(f"{t}: nessun file prezzi in cache, escluso dal formation.")
-            continue
-        s = pd.read_parquet(p, columns=["Adj Close"]).reindex(days)["Adj Close"]
-        if s.isna().any():
-            warnings.warn(f"{t}: storico incompleto nel formation period, escluso.")
-            continue
-        prices[t] = s
-    price_df = pd.DataFrame(prices)
-    return price_df.pct_change().iloc[1:]
+    return _load_returns_window(tickers, formation_start, formation_end, price_dir, require_complete=True)
+
+
+def load_trading_returns(
+    tickers: list[str], trading_start, trading_end, price_dir: Path = PRICES_DIR,
+) -> pd.DataFrame:
+    """
+    Same as load_formation_returns but for the TRADING period: no
+    completeness filter, mid-period NaN (delisting) is preserved rather
+    than dropping the ticker, since src/trading.py's simulate_pair_same_day
+    / simulate_pair_wait_one_day handle a NaN mid-series explicitly
+    (PROTOCOL.md §1.4/§2.2). Dropping incomplete tickers here would defeat
+    that handling by silently excluding exactly the cases it exists for.
+    """
+    return _load_returns_window(tickers, trading_start, trading_end, price_dir, require_complete=False)
 
 
 def select_pairs_for_formation(

@@ -60,7 +60,13 @@ def download_and_cache_factors() -> pd.DataFrame:
     locale in Parquet. Da eseguire manualmente (python -m data.factors)."""
     import pandas_datareader.data as web
 
-    raw = {name: web.DataReader(name, "famafrench")[0] for name in _DATASETS}
+    # pandas_datareader defaults to roughly the last 5 years when start/end
+    # are omitted; pass explicit bounds or the cache silently misses the
+    # replication window.
+    raw = {
+        name: web.DataReader(name, "famafrench", start=config.DATA_START, end=config.DATA_END)[0]
+        for name in _DATASETS
+    }
     fac = assemble_factors(raw)
     CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
     fac.to_parquet(CACHE_PATH)

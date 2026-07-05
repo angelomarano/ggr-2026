@@ -3,4 +3,5 @@ __pycache__/
 *.pyc
 data/raw/prices/
 data/raw/download_failures.csv
+data/raw/factors.parquet
 .DS_Store

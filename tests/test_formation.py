@@ -10,7 +10,15 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.formation import normalized_price_indices, rank_pairs, select_portfolios, ssd_matrix
+import data.prices as prices_mod
+from src.formation import (
+    load_formation_returns,
+    load_trading_returns,
+    normalized_price_indices,
+    rank_pairs,
+    select_portfolios,
+    ssd_matrix,
+)
 from src.trading import build_price_index
 
 TOL = 1e-9
@@ -136,9 +144,81 @@ def test_select_portfolios_control_partially_populated():
     assert list(portfolios["control"].index) == [101, 102, 103, 104, 105]
 
 
+def _write_fake_calendar_and_prices(tmp_path):
+    """6 consecutive trading days. AAA has a full price history; BBB is
+    missing its last 2 days (mid-window delisting); CCC has no file at all."""
+    dates = pd.to_datetime(
+        ["2020-01-02", "2020-01-03", "2020-01-06", "2020-01-07", "2020-01-08", "2020-01-09"]
+    )
+    pd.DataFrame({"Close": range(len(dates))}, index=dates).to_parquet(tmp_path / "_idx_GSPC.parquet")
+
+    aaa = pd.Series([100.0, 101.0, 102.0, 103.0, 104.0, 105.0], index=dates, name="Adj Close")
+    pd.DataFrame({"Adj Close": aaa}).to_parquet(tmp_path / "AAA.parquet")
+
+    bbb = pd.Series([50.0, 51.0, 52.0, 53.0, np.nan, np.nan], index=dates, name="Adj Close")
+    pd.DataFrame({"Adj Close": bbb}).to_parquet(tmp_path / "BBB.parquet")
+
+    return dates
+
+
+def test_load_formation_returns_exact_row_count_and_completeness_filter(tmp_path, monkeypatch):
+    """
+    Requesting the window [dates[1], dates[5]] (5 reference days) must
+    return exactly 5 rows, using dates[0] as the pct_change anchor - not 4
+    (a naive reindex+pct_change over the window alone loses the first row).
+    AAA has full history -> kept, 5 hand-computable returns. BBB has NaN in
+    the last 2 days of the window -> excluded entirely (formation requires
+    completeness). CCC has no cached file at all -> excluded, no crash.
+    """
+    dates = _write_fake_calendar_and_prices(tmp_path)
+    monkeypatch.setattr(prices_mod, "RAW", tmp_path)
+
+    with pytest.warns(UserWarning):
+        returns = load_formation_returns(["AAA", "BBB", "CCC"], dates[1], dates[5], price_dir=tmp_path)
+
+    assert len(returns) == 5, "5 reference days requested -> exactly 5 return rows, not 4"
+    assert list(returns.columns) == ["AAA"], "BBB (incomplete) and CCC (no file) must be excluded"
+    manual = [101 / 100 - 1, 102 / 101 - 1, 103 / 102 - 1, 104 / 103 - 1, 105 / 104 - 1]
+    assert np.allclose(returns["AAA"].to_numpy(), manual)
+
+
+def test_load_trading_returns_keeps_nan_for_delisting(tmp_path, monkeypatch):
+    """
+    Same fixture and window as the formation test above, but the trading
+    loader must PRESERVE BBB's mid-window NaN instead of dropping the
+    ticker - this is exactly the delisting case src/trading.py's
+    simulate_pair_* functions are built to handle. CCC (no file) is still
+    skipped, since there is nothing to simulate for it either way.
+    """
+    dates = _write_fake_calendar_and_prices(tmp_path)
+    monkeypatch.setattr(prices_mod, "RAW", tmp_path)
+
+    returns = load_trading_returns(["AAA", "BBB", "CCC"], dates[1], dates[5], price_dir=tmp_path)
+
+    assert len(returns) == 5
+    assert list(returns.columns) == ["AAA", "BBB"]
+    assert not returns["BBB"].iloc[:3].isna().any(), "first 3 days of the window have valid BBB prices"
+    assert returns["BBB"].iloc[3:].isna().all(), "last 2 days: BBB price missing -> NaN return, preserved"
+
+
+def test_load_returns_window_raises_when_no_anchor_day_exists(tmp_path, monkeypatch):
+    """
+    Edge case hit in production (Gate 1 replication, run 2003-01): if the
+    requested window starts on the very first date in the cached price
+    history, there is no earlier trading day to anchor the first return.
+    Both loaders must raise a clear ValueError rather than silently
+    computing a wrong or truncated result.
+    """
+    dates = _write_fake_calendar_and_prices(tmp_path)
+    monkeypatch.setattr(prices_mod, "RAW", tmp_path)
+
+    with pytest.raises(ValueError, match="no reference trading day before"):
+        load_formation_returns(["AAA"], dates[0], dates[5], price_dir=tmp_path)
+
+
 if __name__ == "__main__":
     test_normalized_price_indices_matches_build_price_index()
     test_ssd_and_rank_hand_computed_with_tie_break()
     test_select_portfolios_small_universe_truncates_gracefully()
     test_select_portfolios_control_partially_populated()
-    print("test_formation: test puri OK (il test sigma=0 richiede pytest.warns)")
+    print("test_formation: pure tests OK (sigma=0, loader tests need pytest fixtures)")

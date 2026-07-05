@@ -84,6 +84,35 @@ def test_aggregate_portfolio_run_committed_and_employed():
     assert abs(agg["employed_return"].iloc[1] - 11 / 60) < TOL
 
 
+def test_aggregate_portfolio_run_long_short_committed_returns():
+    """
+    Same 2-pair portfolio as test_aggregate_portfolio_run_committed_and_employed.
+    Pair A's day-2 payoff (11/60) decomposes into long_contribution=0.10
+    (long leg 2, w=1.0 * r2[1]=0.10) and short_contribution=1/12
+    (short leg 1, w=1.0 * r1[1]=-1/12, i.e. daily_short_payoff=-1/12).
+    Pair B never opens: zero contribution on both legs.
+    Expected: long_payoff_sum=[0, 0.10], short_payoff_sum=[0, -1/12],
+    long_committed_return = long_payoff_sum/2, short_committed_return = short_payoff_sum/2.
+    """
+    pair_A = simulate_pair_same_day(
+        np.array([0.20, -1 / 12]), np.array([0.00, 0.10]), sigma=0.05, k=2.0
+    )
+    pair_B = simulate_pair_same_day(
+        np.array([0.01, -0.01]), np.array([0.00, 0.00]), sigma=0.05, k=2.0
+    )
+
+    agg = aggregate_portfolio_run({"A": pair_A, "B": pair_B}, n_days=2, n_selected=2)
+
+    assert np.allclose(agg["long_payoff_sum"], [0.0, 0.10])
+    assert np.allclose(agg["short_payoff_sum"], [0.0, -1 / 12])
+    assert np.allclose(agg["long_committed_return"], [0.0, 0.05])
+    assert np.allclose(agg["short_committed_return"], [0.0, -1 / 24])
+    # sanity: long - short must reconcile with the combined committed_return
+    assert np.allclose(
+        agg["long_committed_return"] - agg["short_committed_return"], agg["committed_return"]
+    )
+
+
 def test_aggregate_portfolio_run_zero_selected_no_division_error():
     """n_selected=0 (nessuna coppia selezionabile, es. golden set troppo
     piccolo): committed_return deve essere zero ovunque, non un errore."""
@@ -153,6 +182,7 @@ if __name__ == "__main__":
     test_pair_employed_mask_excludes_open_day_includes_close_day()
     test_pair_employed_mask_multiple_episodes()
     test_aggregate_portfolio_run_committed_and_employed()
+    test_aggregate_portfolio_run_long_short_committed_returns()
     test_aggregate_portfolio_run_zero_selected_no_division_error()
     test_aggregate_portfolio_run_ignores_wait_one_day_missed_event()
     test_compound_to_monthly_groups_by_calendar_month()

@@ -65,7 +65,11 @@ def simulate_pair_same_day(
     prezzi validi per entrambe le gambe).
 
     Ritorna: P1, P2, spread (indice 0..n), daily_payoff (indice 0..n-1,
-    payoff realizzato il giorno t+1), trade log, payoff cumulato.
+    payoff realizzato il giorno t+1), daily_long_payoff/daily_short_payoff
+    (contributo di ciascuna gamba al payoff, w_long*r_long e w_short*r_short:
+    daily_payoff = daily_long_payoff - daily_short_payoff; usati per la
+    decomposizione alpha long/short, PROTOCOL.md §2.4), trade log, payoff
+    cumulato.
     """
     n = len(returns_1)
     assert len(returns_2) == n, "le due serie devono avere la stessa lunghezza"
@@ -80,6 +84,8 @@ def simulate_pair_same_day(
     long_leg = None  # 1 o 2: quale gamba e' long
     w_long = w_short = 0.0
     daily_payoff = np.zeros(n)
+    daily_long_payoff = np.zeros(n)
+    daily_short_payoff = np.zeros(n)
     trades: list[dict] = []
 
     for t in range(1, last_day + 1):
@@ -88,8 +94,11 @@ def simulate_pair_same_day(
                 r_long, r_short = returns_2[t - 1], returns_1[t - 1]
             else:
                 r_long, r_short = returns_1[t - 1], returns_2[t - 1]
-            payoff = w_long * r_long - w_short * r_short
-            daily_payoff[t - 1] = payoff
+            long_contribution = w_long * r_long
+            short_contribution = w_short * r_short
+            daily_long_payoff[t - 1] = long_contribution
+            daily_short_payoff[t - 1] = short_contribution
+            daily_payoff[t - 1] = long_contribution - short_contribution
             w_long *= 1 + r_long
             w_short *= 1 + r_short
 
@@ -123,7 +132,9 @@ def simulate_pair_same_day(
 
     return {
         "P1": P1, "P2": P2, "spread": spread,
-        "daily_payoff": daily_payoff, "trades": trades,
+        "daily_payoff": daily_payoff,
+        "daily_long_payoff": daily_long_payoff, "daily_short_payoff": daily_short_payoff,
+        "trades": trades,
         "total_payoff": float(daily_payoff.sum()),
     }
 
@@ -156,9 +167,10 @@ def simulate_pair_wait_one_day(
     conferma scade silenziosamente, non diversamente da un segnale mai
     confermato entro la fine ordinaria del periodo).
 
-    Ritorna: stesso schema di simulate_pair_same_day; gli eventi "open"
-    portano anche "signal_day" (il giorno in cui il segnale e' stato
-    osservato, un giorno prima dell'apertura).
+    Ritorna: stesso schema di simulate_pair_same_day (incluse
+    daily_long_payoff/daily_short_payoff); gli eventi "open" portano anche
+    "signal_day" (il giorno in cui il segnale e' stato osservato, un giorno
+    prima dell'apertura).
     """
     n = len(returns_1)
     assert len(returns_2) == n, "le due serie devono avere la stessa lunghezza"
@@ -174,6 +186,8 @@ def simulate_pair_wait_one_day(
     w_long = w_short = 0.0
     pending: dict | None = None  # segnale osservato, in attesa di esecuzione il giorno dopo
     daily_payoff = np.zeros(n)
+    daily_long_payoff = np.zeros(n)
+    daily_short_payoff = np.zeros(n)
     trades: list[dict] = []
 
     for t in range(1, last_day + 1):
@@ -182,8 +196,11 @@ def simulate_pair_wait_one_day(
                 r_long, r_short = returns_2[t - 1], returns_1[t - 1]
             else:
                 r_long, r_short = returns_1[t - 1], returns_2[t - 1]
-            payoff = w_long * r_long - w_short * r_short
-            daily_payoff[t - 1] = payoff
+            long_contribution = w_long * r_long
+            short_contribution = w_short * r_short
+            daily_long_payoff[t - 1] = long_contribution
+            daily_short_payoff[t - 1] = short_contribution
+            daily_payoff[t - 1] = long_contribution - short_contribution
             w_long *= 1 + r_long
             w_short *= 1 + r_short
 
@@ -239,6 +256,8 @@ def simulate_pair_wait_one_day(
 
     return {
         "P1": P1, "P2": P2, "spread": spread,
-        "daily_payoff": daily_payoff, "trades": trades,
+        "daily_payoff": daily_payoff,
+        "daily_long_payoff": daily_long_payoff, "daily_short_payoff": daily_short_payoff,
+        "trades": trades,
         "total_payoff": float(daily_payoff.sum()),
     }

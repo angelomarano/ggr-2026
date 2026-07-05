@@ -77,22 +77,38 @@ def aggregate_portfolio_run(
       n_open              numero di coppie aperte quel giorno (employed)
       committed_return    payoff_sum / n_selected (0.0 se n_selected==0)
       employed_return     payoff_sum / n_open, 0.0 se n_open==0 (mai NaN)
+
+    Also returns long_payoff_sum/short_payoff_sum and their committed-capital
+    returns (long_committed_return, short_committed_return), summing each
+    pair's daily_long_payoff/daily_short_payoff (PROTOCOL.md §2.4, long/short
+    alpha decomposition — feed these into inference.long_short_leg_regression
+    after compound_to_monthly). Same n_selected denominator and zero-division
+    handling as committed_return; requires pair_results built from a
+    simulate_pair_* version that returns daily_long_payoff/daily_short_payoff.
     """
     if n_selected is None:
         n_selected = len(pair_results)
 
     payoff_sum = np.zeros(n_days)
+    long_payoff_sum = np.zeros(n_days)
+    short_payoff_sum = np.zeros(n_days)
     n_open = np.zeros(n_days, dtype=int)
     for res in pair_results.values():
         daily_payoff = np.asarray(res["daily_payoff"])
         assert len(daily_payoff) == n_days, "tutte le coppie del run devono avere lo stesso trading period"
         payoff_sum += daily_payoff
+        long_payoff_sum += np.asarray(res["daily_long_payoff"])
+        short_payoff_sum += np.asarray(res["daily_short_payoff"])
         n_open += pair_employed_mask(res["trades"], n_days).astype(int)
 
     if n_selected > 0:
         committed_return = payoff_sum / n_selected
+        long_committed_return = long_payoff_sum / n_selected
+        short_committed_return = short_payoff_sum / n_selected
     else:
         committed_return = np.zeros(n_days)
+        long_committed_return = np.zeros(n_days)
+        short_committed_return = np.zeros(n_days)
 
     employed_return = np.divide(
         payoff_sum, n_open, out=np.zeros_like(payoff_sum), where=n_open > 0
@@ -103,6 +119,10 @@ def aggregate_portfolio_run(
         "n_open": n_open,
         "committed_return": committed_return,
         "employed_return": employed_return,
+        "long_payoff_sum": long_payoff_sum,
+        "short_payoff_sum": short_payoff_sum,
+        "long_committed_return": long_committed_return,
+        "short_committed_return": short_committed_return,
     })
 
 
