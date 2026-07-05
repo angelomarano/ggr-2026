@@ -63,3 +63,4 @@ COST_GRID_BP_PER_SIDE = (0, 5, 10, 20, 40)   # round-trip coppia = 4 * c
 CONSTITUENTS_CSV = "data/raw/sp500_membership.csv"
 PRICES_DIR = "data/raw/prices"        # parquet per ticker
 FAILURES_LOG = "data/raw/download_failures.csv"
+FACTORS_CACHE = "data/raw/factors.parquet"   # FF3 + Mom + ST_Rev + RF, mensile
