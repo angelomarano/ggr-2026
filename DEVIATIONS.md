@@ -79,3 +79,71 @@ H5: repeat the top-20 vs control comparison on the full universe too (not
 just the golden set) as an explicit robustness check, since the
 survive-every-run constraint is specific to the golden set and may not
 reproduce elsewhere.
+
+## 2026-07-05 — Gate 2: ticker con dati Yahoo corrotti (rendimenti estremi e prezzi congelati), due filtri causali aggiunti
+
+**Scoperta:** durante l'esecuzione one-shot di Gate 2 (universo pieno, 2010-2025),
+il bootstrap decile-matched del portafoglio primario ha prodotto numeri
+astronomicamente assurdi (media delle repliche dell'ordine di 10^18%). Un'indagine
+sui dati grezzi ha trovato 25 ticker con rendimenti giornalieri superiori al 300%
+in valore assoluto in almeno un giorno tra il 2009 e il 2026 (TNB, KRI, CBE, TIE,
+NCC, BOL, CFC, MEE, CIN, PBG, BMC, CPWR, HPC, GLK, GDW, PTV, STI, UVN, HET, FSH,
+EP, UPC, EQ, MI, PALM), quasi certamente per riciclo del simbolo ticker (una
+societa' delistata il cui ticker viene riassegnato a un'altra entita', spesso
+OTC/penny-stock, senza distinzione nella serie storica di Yahoo Finance).
+
+**Impatto quantificato:**
+- 57/192 run OOS (universo pieno) hanno avuto almeno uno dei 25 ticker corrotti
+  sopravvivere al filtro di completezza formation preesistente (nessun NaN, quindi
+  non escluso dal filtro "no-trade day" gia' presente).
+- Contaminazione REALE confermata (non solo possibile sostituto casuale nel
+  bootstrap) in 5 coppie su 2 run: sempre e solo BMC (2014-01 control rank117:
+  BMC/BXP; 2014-04 top_20 rank10/17: BMC/MCD, BMC/BMS; 2014-04 control
+  rank112/118: BMC/KO, BMC/CNP).
+- Causa di questi 5 casi: NON un salto di rendimento estremo (le date esatte dei
+  rendimenti estremi di BMC non cadono in nessuna delle due finestre di formation
+  coinvolte), ma un prezzo Adj Close congelato (bit-identico) per mesi consecutivi
+  (es. $2380.0 esatto da agosto a ottobre 2013, con volume sospetto che oscilla
+  tra 2000 e 0) — un indice di prezzo normalizzato costante "combacia"
+  artificialmente con qualunque altro titolo a bassa volatilita', abbassando la
+  SSD in modo spurio.
+- Nessuno dei 25 ticker corrotti appartiene al golden set (ne' quello di replica
+  ne' quello OOS), tranne TIE che e' nel golden set di replica ma la cui finestra
+  di corruzione (2010-2017) e' interamente dopo la finestra di Gate 1 (2003-2009):
+  Gate 1 non e' contaminato.
+
+**Fix applicato (src/formation.py, config.py):** due filtri causali, applicati
+SOLO al formation period del run corrente (mai a dati futuri rispetto a quel run
+— stesso principio del filtro GGR gia' esistente su "giorno senza scambi"):
+1. `config.MAX_ABS_DAILY_RETURN` (default 3.0 = 300%): esclude un ticker se un
+   suo rendimento giornaliero nel formation period supera la soglia in valore
+   assoluto.
+2. `config.MAX_CONSECUTIVE_FROZEN_DAYS` (default 5): esclude un ticker se il suo
+   Adj Close resta bit-identico per piu' di N giorni di borsa consecutivi nel
+   formation period. Deliberatamente basato solo sul prezzo, non sul volume (il
+   volume di BMC e' esso stesso un segnale inaffidabile).
+
+Entrambi i parametri sono marcati esplicitamente in config.py come aggiunte
+POST-HOC, distinte dai parametri congelati dal protocollo originale
+(OPEN_TRIGGER_SIGMAS, FORMATION_DAYS, ecc.).
+
+**Verifica:** dopo il fix, tutti e 5 i casi di contaminazione reale sono risolti
+(BMC escluso in entrambi i run, sostituito da coppie SSD-legittime, nessun altro
+ticker corrotto entra al loro posto). Test sintetici aggiunti per entrambi i
+filtri, incluse verifiche esplicite di causalita' (nessun look-ahead: lo stesso
+ticker con la stessa anomalia e' escluso o meno a seconda che la specifica
+finestra di formation del run la contenga).
+
+**Nota — distinto dal problema Gate 0:** questo NON e' lo stesso problema gia'
+documentato per Gate 0 (Yahoo che elimina interamente lo storico dei titoli
+delistati). Stessa fonte dati (Yahoo Finance), due difetti diversi: Gate 0
+riguarda l'ASSENZA di dati per titoli delistati; questo riguarda dati PRESENTI
+ma corrotti (valori numericamente implausibili) per titoli il cui simbolo e'
+stato riciclato dopo il delisting originale.
+
+**Decisione:** Gate 2 (braccio full_universe) ri-eseguito una seconda volta dopo
+il fix, esplicitamente loggato come tale (non un rilancio silenzioso): numeri
+prima/dopo entrambi visibili in results/frozen/gate2_report.md e
+gate2_results.json (chiave "full_universe_before_fix"). Braccio
+golden_set_robustness non ri-eseguito: gia' verificato pulito, nessuno dei 25
+ticker corrotti vi appartiene.

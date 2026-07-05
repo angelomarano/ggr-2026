@@ -64,3 +64,22 @@ CONSTITUENTS_CSV = "data/raw/sp500_membership.csv"
 PRICES_DIR = "data/raw/prices"        # parquet per ticker
 FAILURES_LOG = "data/raw/download_failures.csv"
 FACTORS_CACHE = "data/raw/factors.parquet"   # FF3 + Mom + ST_Rev + RF, mensile
+
+# ---------------------------------------------------------------- POST-HOC: data quality
+# NON un parametro del protocollo originale (a differenza di OPEN_TRIGGER_SIGMAS,
+# FORMATION_DAYS, ecc., che sono congelati da PROTOCOL.md fin dall'inizio).
+# Aggiunto dopo la scoperta, durante il Gate 2, di ~25 ticker con dati Yahoo
+# gravemente corrotti (riciclo di ticker su quotazioni OTC/penny-stock stantie
+# dopo il delisting originale — vedi DEVIATIONS.md). Un rendimento giornaliero
+# assoluto oltre questa soglia e' quasi certamente un artefatto dei dati, non
+# un movimento di prezzo reale, su un universo large/mid-cap S&P 500.
+MAX_ABS_DAILY_RETURN = 3.0    # 300%; oltre, il ticker e' escluso dal formation del run
+
+# Secondo filtro post-hoc, stessa scoperta: alcuni ticker corrotti non
+# saltano ma restano con Adj Close bit-identico (quotazione congelata/stantia)
+# per lunghi tratti nel formation - rendimento zero ogni giorno, quindi il
+# filtro sopra non li vede, ma un indice di prezzo normalizzato costante
+# "combacia" artificialmente con qualunque altro titolo a bassa volatilita',
+# abbassando la SSD in modo spurio. Un titolo large/mid-cap liquido non ha
+# praticamente mai 5 giorni di borsa consecutivi con Adj Close identico.
+MAX_CONSECUTIVE_FROZEN_DAYS = 5   # oltre, il ticker e' escluso dal formation del run

@@ -123,6 +123,28 @@ def select_portfolios(
     }
 
 
+def _max_consecutive_frozen_run(prices: pd.Series) -> int:
+    """
+    Longest run of consecutive bit-identical values in `prices` (exact
+    equality, not approximate). NaN never extends a run (NaN != NaN), so a
+    gap never counts as "frozen". Returns 0 for an empty series, 1 if no
+    two consecutive values are ever equal.
+    """
+    values = prices.to_numpy()
+    n = len(values)
+    if n == 0:
+        return 0
+    max_run = 1
+    current_run = 1
+    for i in range(1, n):
+        if values[i] == values[i - 1]:
+            current_run += 1
+            max_run = max(max_run, current_run)
+        else:
+            current_run = 1
+    return max_run
+
+
 def _load_returns_window(
     tickers: list[str], start, end, price_dir: Path, require_complete: bool,
 ) -> pd.DataFrame:
@@ -171,6 +193,46 @@ def _load_returns_window(
         for t in incomplete:
             warnings.warn(f"{t}: storico incompleto nel formation period, escluso.")
         returns = returns.drop(columns=incomplete)
+
+        # Post-hoc data-quality filter (config.MAX_ABS_DAILY_RETURN, see
+        # DEVIATIONS.md): a small number of tickers have severely corrupted
+        # Yahoo data (recycled ticker symbols reassigned to illiquid
+        # OTC/penny-stock entities after the original company delisted),
+        # producing implausible daily returns. Causal by construction: this
+        # only ever looks at `returns`, which was built solely from
+        # [start, end] above - never at data outside this run's own
+        # formation window.
+        extreme = [c for c in returns.columns if (returns[c].abs() > config.MAX_ABS_DAILY_RETURN).any()]
+        for t in extreme:
+            warnings.warn(
+                f"{t}: rendimento giornaliero oltre {config.MAX_ABS_DAILY_RETURN:.0%} "
+                "nel formation period, escluso (dato verosimilmente corrotto)."
+            )
+        returns = returns.drop(columns=extreme)
+
+        # Second post-hoc data-quality filter (config.MAX_CONSECUTIVE_FROZEN_DAYS,
+        # see DEVIATIONS.md): some corrupted tickers have long runs of
+        # bit-identical ("frozen"/stale) Adj Close within the formation
+        # window instead of an outright jump - a flat price has zero daily
+        # return, so it never trips the extreme-return filter above, but it
+        # produces an artificially low SSD against any other low-volatility
+        # ticker (a constant normalized price index trivially "matches"
+        # anything that barely moves). Deliberately price-only, not Volume:
+        # the Volume field on these same tickers is itself an unreliable,
+        # seemingly artifactual signal. Causal: computed only on the
+        # formation-window's own rows (the anchor day before `start` is
+        # excluded), never on data outside [start, end].
+        window_prices = price_df.iloc[1:]
+        frozen = [
+            c for c in returns.columns
+            if _max_consecutive_frozen_run(window_prices[c]) > config.MAX_CONSECUTIVE_FROZEN_DAYS
+        ]
+        for t in frozen:
+            warnings.warn(
+                f"{t}: prezzo congelato per oltre {config.MAX_CONSECUTIVE_FROZEN_DAYS} giorni "
+                "consecutivi nel formation period, escluso (dato verosimilmente corrotto)."
+            )
+        returns = returns.drop(columns=frozen)
     return returns
 
 

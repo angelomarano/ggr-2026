@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+import config
 import data.prices as prices_mod
 from src.formation import (
     load_formation_returns,
@@ -214,6 +215,123 @@ def test_load_returns_window_raises_when_no_anchor_day_exists(tmp_path, monkeypa
 
     with pytest.raises(ValueError, match="no reference trading day before"):
         load_formation_returns(["AAA"], dates[0], dates[5], price_dir=tmp_path)
+
+
+def _write_calendar_and_prices_with_jump(tmp_path):
+    """12 consecutive trading days. GOOD has smooth, steadily increasing
+    prices throughout (never an extreme daily return). BAD jumps from 100
+    to 500 between dates[5] and dates[6] (a +400% single-day return,
+    exceeding config.MAX_ABS_DAILY_RETURN=3.0) and is flat before and after
+    - the ONLY extreme return in its whole history is that one transition."""
+    dates = pd.bdate_range("2020-01-01", periods=12)
+    pd.DataFrame({"Close": range(len(dates))}, index=dates).to_parquet(tmp_path / "_idx_GSPC.parquet")
+
+    good = pd.Series([100.0 + i for i in range(12)], index=dates, name="Adj Close")
+    pd.DataFrame({"Adj Close": good}).to_parquet(tmp_path / "GOOD.parquet")
+
+    bad_prices = [100.0] * 6 + [500.0] * 6
+    bad = pd.Series(bad_prices, index=dates, name="Adj Close")
+    pd.DataFrame({"Adj Close": bad}).to_parquet(tmp_path / "BAD.parquet")
+
+    return dates
+
+
+def test_extreme_return_excluded_only_within_its_own_formation_window(tmp_path, monkeypatch):
+    """
+    Causal data-quality filter (config.MAX_ABS_DAILY_RETURN, added post-hoc
+    after the Gate 2 corrupted-ticker discovery, see DEVIATIONS.md): BAD has
+    a +400% single-day jump between dates[5] and dates[6].
+
+    A formation window that INCLUDES that transition must exclude BAD. A
+    DIFFERENT formation window that does NOT include it (here, entirely
+    after it) must NOT exclude BAD - this is the explicit no-look-ahead
+    check: the same ticker, with the exact same underlying jump somewhere
+    in its history, is excluded or not purely based on whether THIS run's
+    own formation window contains the anomaly, never based on data outside it.
+    """
+    dates = _write_calendar_and_prices_with_jump(tmp_path)
+    monkeypatch.setattr(prices_mod, "RAW", tmp_path)
+
+    with pytest.warns(UserWarning, match="rendimento giornaliero"):
+        returns_with_jump = load_formation_returns(["GOOD", "BAD"], dates[1], dates[6], price_dir=tmp_path)
+    assert list(returns_with_jump.columns) == ["GOOD"], "BAD must be excluded: its jump falls inside this window"
+
+    returns_after_jump = load_formation_returns(["GOOD", "BAD"], dates[8], dates[11], price_dir=tmp_path)
+    assert list(returns_after_jump.columns) == ["GOOD", "BAD"], (
+        "BAD's jump is NOT inside this later window -> must NOT be excluded here "
+        "(no look-ahead, no permanent blacklist across runs)"
+    )
+    assert not (returns_after_jump["BAD"].abs() > config.MAX_ABS_DAILY_RETURN).any()
+
+
+def test_normal_ticker_not_affected_by_data_quality_filter(tmp_path, monkeypatch):
+    """A ticker with only ordinary daily returns is never excluded by the
+    extreme-return filter, even when sharing a window with a excluded one."""
+    dates = _write_calendar_and_prices_with_jump(tmp_path)
+    monkeypatch.setattr(prices_mod, "RAW", tmp_path)
+
+    returns = load_formation_returns(["GOOD"], dates[1], dates[6], price_dir=tmp_path)
+    assert list(returns.columns) == ["GOOD"]
+    assert not (returns["GOOD"].abs() > config.MAX_ABS_DAILY_RETURN).any()
+
+
+def _write_calendar_and_prices_with_frozen_run(tmp_path):
+    """14 consecutive trading days. FROZEN has a 6-day run of bit-identical
+    Adj Close (dates[4]..dates[9], all 50.0) - above
+    config.MAX_CONSECUTIVE_FROZEN_DAYS=5. MILD has only a 4-day identical
+    run (dates[5]..dates[8], all 15.0) - below the threshold."""
+    dates = pd.bdate_range("2021-01-01", periods=14)
+    pd.DataFrame({"Close": range(len(dates))}, index=dates).to_parquet(tmp_path / "_idx_GSPC.parquet")
+
+    frozen = pd.Series(
+        [10.0, 11.0, 12.0, 13.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 60.0, 61.0, 62.0, 63.0],
+        index=dates, name="Adj Close",
+    )
+    pd.DataFrame({"Adj Close": frozen}).to_parquet(tmp_path / "FROZEN.parquet")
+
+    mild = pd.Series(
+        [10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 15.0, 15.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0],
+        index=dates, name="Adj Close",
+    )
+    pd.DataFrame({"Adj Close": mild}).to_parquet(tmp_path / "MILD.parquet")
+
+    return dates
+
+
+def test_frozen_price_run_excluded_above_threshold_included_below(tmp_path, monkeypatch):
+    """
+    Causal frozen-price filter (config.MAX_CONSECUTIVE_FROZEN_DAYS, added
+    post-hoc after the Gate 2 BMC discovery, see DEVIATIONS.md): a ticker
+    whose Adj Close is bit-identical for MORE than the threshold's worth of
+    consecutive formation-window days is excluded (FROZEN: 6 days > 5);
+    one at or below the threshold is not (MILD: 4 days <= 5).
+    """
+    dates = _write_calendar_and_prices_with_frozen_run(tmp_path)
+    monkeypatch.setattr(prices_mod, "RAW", tmp_path)
+
+    with pytest.warns(UserWarning, match="prezzo congelato"):
+        returns = load_formation_returns(["FROZEN", "MILD"], dates[1], dates[12], price_dir=tmp_path)
+
+    assert list(returns.columns) == ["MILD"], "FROZEN (6-day run) excluded; MILD (4-day run) kept"
+
+
+def test_frozen_price_run_causal_partial_overlap_not_excluded(tmp_path, monkeypatch):
+    """
+    Same FROZEN ticker and the same underlying 6-day frozen run as above,
+    but a DIFFERENT run's formation window that only overlaps the TAIL of
+    it (3 of the 6 frozen days: dates[7], dates[8], dates[9]) must NOT
+    exclude FROZEN - the max-consecutive-run count is computed only on
+    this window's own days, never using knowledge of the longer run that
+    exists outside it (no look-ahead, no cross-run memory).
+    """
+    dates = _write_calendar_and_prices_with_frozen_run(tmp_path)
+    monkeypatch.setattr(prices_mod, "RAW", tmp_path)
+
+    returns = load_formation_returns(["FROZEN"], dates[7], dates[13], price_dir=tmp_path)
+
+    assert list(returns.columns) == ["FROZEN"], (
+        "only 3 of the 6 frozen days fall inside this window -> below threshold, not excluded"
+    )
 
 
 if __name__ == "__main__":

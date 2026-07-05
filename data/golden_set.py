@@ -15,6 +15,11 @@ disaccoppia le due cose:
 Uso: python -m data.golden_set
 Output: results/replication/golden_set.csv (lista ticker) +
         results/replication/golden_set_summary.txt
+
+build_golden_set() now takes the trading-start window and output
+location as parameters (defaults reproduce the call above exactly).
+`python -m data.golden_set oos` builds the OOS-window golden set into
+results/frozen/golden_set_oos.csv instead.
 """
 
 from __future__ import annotations
@@ -28,11 +33,29 @@ from data.prices import _reference_days, RAW
 from data.universe import formation_calendar, load_membership, universe_for_run
 
 
-def build_golden_set() -> list[str]:
+def build_golden_set(
+    trading_start_first: str = config.REPLICATION_TRADING_START_FIRST,
+    trading_start_last: str = config.REPLICATION_TRADING_START_LAST,
+    out_dir: Path = Path("results/replication"),
+    out_name: str = "golden_set",
+) -> list[str]:
+    """
+    Builds the golden set for the given trading-start window: tickers with
+    a complete Yahoo price history (no missing Adj Close, no zero/missing
+    Volume) in every single monthly formation window across that window.
+
+    trading_start_first, trading_start_last: same format as
+        config.REPLICATION_TRADING_START_FIRST/LAST ("YYYY-MM"), so this can
+        be called on any window (e.g. config.OOS_TRADING_START_FIRST/LAST),
+        not just the replication one.
+    out_dir, out_name: where to write `{out_name}.csv` and
+        `{out_name}_summary.txt`.
+
+    Calling with no arguments reproduces exactly the original
+    replication-window behavior (results/replication/golden_set.csv).
+    """
     membership = load_membership(config.CONSTITUENTS_CSV)
-    cal = formation_calendar(
-        config.REPLICATION_TRADING_START_FIRST, config.REPLICATION_TRADING_START_LAST
-    )
+    cal = formation_calendar(trading_start_first, trading_start_last)
     cache = {p.stem: p for p in RAW.glob("*.parquet")}
 
     # Candidati = unione dei membri point-in-time in TUTTI i run di replica
@@ -67,19 +90,21 @@ def build_golden_set() -> list[str]:
         per_run_complete_count.append((run_id, len(still_golden)))
 
     golden = sorted(still_golden)
-    out_dir = Path("results/replication")
     out_dir.mkdir(parents=True, exist_ok=True)
-    pd.Series(golden, name="ticker").to_csv(out_dir / "golden_set.csv", index=False)
+    pd.Series(golden, name="ticker").to_csv(out_dir / f"{out_name}.csv", index=False)
 
-    with open(out_dir / "golden_set_summary.txt", "w") as f:
+    with open(out_dir / f"{out_name}_summary.txt", "w") as f:
         f.write(f"Golden set finale: {len(golden)} titoli\n")
-        f.write(f"Candidati iniziali (union membership 2003-2009): {len(candidates)}\n\n")
+        f.write(
+            f"Candidati iniziali (union membership {trading_start_first}..{trading_start_last}): "
+            f"{len(candidates)}\n\n"
+        )
         f.write("Traiettoria (run, titoli ancora golden dopo questo run):\n")
         for run_id, n in per_run_complete_count:
             f.write(f"  {run_id}: {n}\n")
 
     print(f"Golden set: {len(golden)} titoli su {len(candidates)} candidati")
-    print(f"Salvato in {out_dir/'golden_set.csv'} e {out_dir/'golden_set_summary.txt'}")
+    print(f"Salvato in {out_dir / f'{out_name}.csv'} e {out_dir / f'{out_name}_summary.txt'}")
     if len(golden) < 100:
         print("\nATTENZIONE: golden set sotto 100 titoli, potrebbe essere insufficiente")
         print("per SSD/matching con abbastanza varieta'. Valutare di allentare il")
@@ -89,4 +114,12 @@ def build_golden_set() -> list[str]:
 
 
 if __name__ == "__main__":
-    build_golden_set()
+    import sys
+
+    if len(sys.argv) > 1 and sys.argv[1] == "oos":
+        build_golden_set(
+            config.OOS_TRADING_START_FIRST, config.OOS_TRADING_START_LAST,
+            Path("results/frozen"), "golden_set_oos",
+        )
+    else:
+        build_golden_set()
