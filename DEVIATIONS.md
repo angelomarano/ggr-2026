@@ -147,3 +147,16 @@ prima/dopo entrambi visibili in results/frozen/gate2_report.md e
 gate2_results.json (chiave "full_universe_before_fix"). Braccio
 golden_set_robustness non ri-eseguito: gia' verificato pulito, nessuno dei 25
 ticker corrotti vi appartiene.
+
+**Nota di conferma (verifica a posteriori, sola lettura):** la chiave
+"full_universe" attualmente in gate2_results.json - quella usata per TUTTE le
+tabelle di gate2_report.md e del README (statistiche descrittive a 12
+combinazioni, le tre falsificazioni, E ANCHE H2/H3/H4) - e' l'output della
+seconda esecuzione (post-fix), non un residuo della prima. Confermato
+confrontando valori noti per differire tra le due esecuzioni:
+b(HighVol) H2 = 0.31470% (t=2.143) in "full_universe" contro 0.31411%
+(t=2.139) in "full_universe_before_fix"; correlazione grezza media H3 =
+0.48245 contro 0.47850; delta H4 2010-2017 = 0.013890% contro 0.013993%.
+Le differenze sono piccole (coerenti con sole 2 run su 192 che cambiano
+selezione) ma non nulle: H2/H3/H4, non solo le descrittive e il bootstrap,
+sono state ricalcolate post-fix.
