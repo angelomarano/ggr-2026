@@ -1,23 +1,23 @@
 """
-returns.py — Aggregazione a portafoglio dei payoff di coppia (output di
-simulate_pair_same_day / simulate_pair_wait_one_day) e composizione dei 6
-portafogli mensili sovrapposti in un'unica serie (PROTOCOL.md §2.2).
+returns.py — Portfolio-level aggregation of pair payoffs (output of
+simulate_pair_same_day / simulate_pair_wait_one_day) and composition of the
+6 staggered monthly portfolios into a single series (PROTOCOL.md §2.2).
 
-Due livelli:
-1. aggregate_portfolio_run: DENTRO un singolo run (una formation date), somma
-   i payoff giornalieri di tutte le coppie selezionate e calcola
-   - return on COMMITTED capital = somma payoff / N coppie selezionate
-     (il denominatore e' la dimensione NOMINALE del portafoglio, es. 20:
-     va passato esplicitamente come n_selected, non dedotto da quante
-     coppie sono effettivamente disponibili — vedi docstring della funzione);
-   - return on EMPLOYED capital = somma payoff / N coppie APERTE quel giorno
-     specifico; se zero coppie sono aperte, il rendimento e' 0.0 (mai NaN,
-     mai una divisione per zero silenziosa).
-2. compound_to_monthly + combine_overlapping_portfolios: portano la serie
-   giornaliera di UN portafoglio a rendimenti mensili (compounding entro il
-   mese di calendario), poi combinano i rendimenti mensili di piu' run
-   sfalsati con la media alla Jegadeesh-Titman (media semplice tra i
-   portafogli attivi in ciascun mese di calendario).
+Two levels:
+1. aggregate_portfolio_run: WITHIN a single run (one formation date), sums
+   the daily payoffs of all selected pairs and computes
+   - return on COMMITTED capital = payoff sum / N selected pairs
+     (the denominator is the NOMINAL portfolio size, e.g. 20: it must be
+     passed explicitly as n_selected, not inferred from how many pairs are
+     actually available — see the function's docstring);
+   - return on EMPLOYED capital = payoff sum / N pairs OPEN that specific
+     day; if zero pairs are open, the return is 0.0 (never NaN, never a
+     silent division by zero).
+2. compound_to_monthly + combine_overlapping_portfolios: bring the daily
+   series of ONE portfolio to monthly returns (compounding within the
+   calendar month), then combine the monthly returns of multiple staggered
+   runs with Jegadeesh-Titman averaging (simple average across the
+   portfolios active in each calendar month).
 """
 from __future__ import annotations
 
@@ -27,20 +27,20 @@ import pandas as pd
 
 def pair_employed_mask(trades: list[dict], n_days: int) -> np.ndarray:
     """
-    Maschera booleana (lunghezza n_days, indice 0..n_days-1 <-> giorno
-    1..n_days) che marca i giorni in cui la coppia ha una posizione aperta
-    "impiegata" ai fini del capitale employed.
+    Boolean mask (length n_days, index 0..n_days-1 <-> day 1..n_days) that
+    marks the days on which the pair has an open position "employed" for
+    the purposes of employed capital.
 
-    Convenzione (coerente con trading.py: nessun payoff il giorno di
-    apertura, i pesi iniziano a mark-to-market SOLO dal giorno successivo):
-    una coppia aperta al giorno open_day e chiusa al giorno close_day e'
-    "employed" nei giorni (open_day, close_day] inclusivo — cioe' esclude il
-    giorno di apertura stesso (payoff=0 per costruzione, nessun capitale
-    ancora marcato a mercato) e include il giorno di chiusura (l'ultimo
-    payoff viene comunque realizzato quel giorno prima della chiusura).
+    Convention (consistent with trading.py: no payoff on the opening day,
+    weights start marking to market ONLY from the following day): a pair
+    opened on day open_day and closed on day close_day is "employed" on
+    days (open_day, close_day] inclusive — i.e. it excludes the opening day
+    itself (payoff=0 by construction, no capital yet marked to market) and
+    includes the closing day (the last payoff is still realized that day
+    before closing).
 
-    Eventi "missed" (wait-one-day, occasione persa) sono ignorati: non
-    aprono mai una posizione, non contribuiscono capitale employed.
+    "Missed" events (wait-one-day, missed opportunity) are ignored: they
+    never open a position, they contribute no employed capital.
     """
     mask = np.zeros(n_days, dtype=bool)
     open_day = None
@@ -58,25 +58,25 @@ def aggregate_portfolio_run(
     pair_results: dict[str, dict], n_days: int, n_selected: int | None = None
 ) -> pd.DataFrame:
     """
-    pair_results: {pair_id: risultato di simulate_pair_same_day/wait_one_day}
-    per le coppie del portafoglio in UN run (incluse quelle mai aperte:
-    contribuiscono payoff=0 tutti i giorni e nessun giorno "employed").
-    n_days: lunghezza del trading period (deve combaciare per tutte le
-    coppie: stesso run, stesso trading period).
-    n_selected: dimensione NOMINALE del portafoglio (es. config.TOP_PAIRS=20
-    per il top-20; puo' differire da len(pair_results) se l'universo non
-    fornisce abbastanza coppie candidate, PROTOCOL.md §2.1 presuppone un
-    universo ampio ma src/formation.py puo' restituire meno coppie su un
-    golden-set ridotto). Default: len(pair_results) se non specificato.
-    Se n_selected == 0 (nessuna coppia selezionabile), il committed return e'
-    0.0 per ogni giorno anziche' una ZeroDivisionError: un portafoglio vuoto
-    non genera rendimento, non e' un caso indefinito.
+    pair_results: {pair_id: result of simulate_pair_same_day/wait_one_day}
+    for the portfolio's pairs in ONE run (including pairs never opened:
+    they contribute payoff=0 every day and no "employed" day).
+    n_days: length of the trading period (must match for all pairs: same
+    run, same trading period).
+    n_selected: NOMINAL portfolio size (e.g. config.TOP_PAIRS=20 for top-20;
+    can differ from len(pair_results) if the universe doesn't supply enough
+    candidate pairs, PROTOCOL.md §2.1 assumes a large universe but
+    src/formation.py can return fewer pairs on a reduced golden set).
+    Default: len(pair_results) if not specified.
+    If n_selected == 0 (no selectable pair), the committed return is 0.0
+    for every day instead of a ZeroDivisionError: an empty portfolio
+    generates no return, it's not an undefined case.
 
-    Ritorna DataFrame indicizzato 0..n_days-1 (giorno = indice+1) con colonne:
-      payoff_sum          somma dei payoff giornalieri su tutte le coppie
-      n_open              numero di coppie aperte quel giorno (employed)
-      committed_return    payoff_sum / n_selected (0.0 se n_selected==0)
-      employed_return     payoff_sum / n_open, 0.0 se n_open==0 (mai NaN)
+    Returns a DataFrame indexed 0..n_days-1 (day = index+1) with columns:
+      payoff_sum          sum of daily payoffs across all pairs
+      n_open              number of pairs open that day (employed)
+      committed_return    payoff_sum / n_selected (0.0 if n_selected==0)
+      employed_return     payoff_sum / n_open, 0.0 if n_open==0 (never NaN)
 
     Also returns long_payoff_sum/short_payoff_sum and their committed-capital
     returns (long_committed_return, short_committed_return), summing each
@@ -95,7 +95,7 @@ def aggregate_portfolio_run(
     n_open = np.zeros(n_days, dtype=int)
     for res in pair_results.values():
         daily_payoff = np.asarray(res["daily_payoff"])
-        assert len(daily_payoff) == n_days, "tutte le coppie del run devono avere lo stesso trading period"
+        assert len(daily_payoff) == n_days, "all pairs in the run must have the same trading period"
         payoff_sum += daily_payoff
         long_payoff_sum += np.asarray(res["daily_long_payoff"])
         short_payoff_sum += np.asarray(res["daily_short_payoff"])
@@ -128,14 +128,14 @@ def aggregate_portfolio_run(
 
 def compound_to_monthly(daily_returns, dates) -> pd.Series:
     """
-    daily_returns: array-like lunghezza n, rendimenti giornalieri decimali di
-    UN portafoglio in UN trading period (es. la colonna committed_return o
-    employed_return di aggregate_portfolio_run).
-    dates: date di calendario corrispondenti (stessa lunghezza n).
+    daily_returns: array-like of length n, decimal daily returns of ONE
+    portfolio in ONE trading period (e.g. the committed_return or
+    employed_return column of aggregate_portfolio_run).
+    dates: corresponding calendar dates (same length n).
 
-    Ritorna il rendimento composto per mese di calendario:
-    prod_t(1+r_t) - 1 sui giorni del mese, indicizzato per Timestamp di
-    inizio mese (coerente con data/factors.py).
+    Returns the compounded return per calendar month:
+    prod_t(1+r_t) - 1 over the month's days, indexed by start-of-month
+    Timestamp (consistent with data/factors.py).
     """
     s = pd.Series(np.asarray(daily_returns, dtype=float), index=pd.DatetimeIndex(dates))
     monthly = s.groupby(s.index.to_period("M")).apply(lambda x: float(np.prod(1 + x.to_numpy()) - 1))
@@ -146,17 +146,16 @@ def compound_to_monthly(daily_returns, dates) -> pd.Series:
 
 def combine_overlapping_portfolios(monthly_by_run: dict[str, pd.Series]) -> pd.Series:
     """
-    monthly_by_run: {run_id: serie di rendimenti mensili di UN portafoglio
-    sfalsato (una per ciascuna formation date mensile), indicizzata per mese
-    di calendario (Timestamp inizio mese), come da compound_to_monthly.
+    monthly_by_run: {run_id: monthly return series of ONE staggered
+    portfolio (one per monthly formation date), indexed by calendar month
+    (start-of-month Timestamp), as produced by compound_to_monthly.
 
-    Media alla Jegadeesh-Titman (PROTOCOL.md §2.2): il rendimento della
-    strategia in un dato mese di calendario e' la MEDIA SEMPLICE dei
-    rendimenti dei portafogli attivi quel mese (fino a N_OVERLAPPING=6 run,
-    uno per ciascuna delle formation date dei mesi precedenti). Un mese in
-    cui nessun portafoglio e' attivo (bordi della finestra) non compare
-    affatto nella serie risultante: non e' un valore 0, e' semplicemente
-    fuori dominio.
+    Jegadeesh-Titman averaging (PROTOCOL.md §2.2): the strategy's return in
+    a given calendar month is the SIMPLE AVERAGE of the returns of the
+    portfolios active that month (up to N_OVERLAPPING=6 runs, one for each
+    of the preceding months' formation dates). A month in which no
+    portfolio is active (window edges) doesn't appear at all in the
+    resulting series: it's not a value of 0, it's simply out of domain.
     """
     combined = pd.concat(monthly_by_run.values(), axis=1)
     return combined.mean(axis=1, skipna=True).dropna().sort_index()

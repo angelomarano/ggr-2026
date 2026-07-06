@@ -1,18 +1,18 @@
 """
-golden_set.py — Gate 0-bis: costruisce il "golden set" di titoli con storico
-Yahoo COMPLETO in ogni singolo run della finestra di replica (2003-2009),
-usando il cache prezzi gia' scaricato. Nessun nuovo download.
+golden_set.py — Gate 0-bis: builds the "golden set" of tickers with COMPLETE
+Yahoo history in every single run of the replication window (2003-2009),
+using the already-downloaded price cache. No new downloads.
 
-Razionale (DEVIATIONS.md, vedi voce datata): Yahoo cancella l'intero storico
-dei titoli delistati, non solo i giorni successivi al delisting. L'attrition
-sull'universo point-in-time pieno e' quindi troppo alta (51-64% nel 2003-2009)
-per validare la fedelta' meccanica del motore su quella base. Il golden set
-disaccoppia le due cose:
-  (a) fedelta' meccanica del motore -> validata SOLO sul golden set
-  (b) quantificazione del bias da sopravvivenza -> resta sull'universo pieno,
-      riportata come limite/robustness, non come cancello bloccante
+Rationale (DEVIATIONS.md, see dated entry): Yahoo deletes the entire history
+of delisted tickers, not just the days after delisting. Attrition on the full
+point-in-time universe is therefore too high (51-64% in 2003-2009) to validate
+the engine's mechanical fidelity on that basis. The golden set decouples the
+two concerns:
+  (a) engine mechanical fidelity -> validated ONLY on the golden set
+  (b) quantification of survivorship bias -> stays on the full universe,
+      reported as a limitation/robustness check, not as a blocking gate
 
-Uso: python -m data.golden_set
+Usage: python -m data.golden_set
 Output: results/replication/golden_set.csv (lista ticker) +
         results/replication/golden_set_summary.txt
 
@@ -58,9 +58,9 @@ def build_golden_set(
     cal = formation_calendar(trading_start_first, trading_start_last)
     cache = {p.stem: p for p in RAW.glob("*.parquet")}
 
-    # Candidati = unione dei membri point-in-time in TUTTI i run di replica
-    # (cosi' non escludiamo a priori chi e' entrato/uscito dall'S&P 500 nel
-    # mezzo, purche' i prezzi ci siano sempre).
+    # Candidates = union of point-in-time members across ALL replication runs
+    # (this way we don't a priori exclude anyone who entered/left the S&P 500
+    # in between, as long as prices are always available).
     candidates: set[str] = set()
     for _, r in cal.iterrows():
         candidates |= set(universe_for_run(membership, r.formation_start))
@@ -82,9 +82,9 @@ def build_golden_set(
             if df["Adj Close"].notna().all() and (df["Volume"].fillna(0) > 0).all():
                 complete_this_run.add(t)
 
-        # un ticker che NON e' membro in questo run semplicemente non conta
-        # (ne' a favore ne' contro) per questo run; ma se e' membro e non e'
-        # completo, esce dal golden set per sempre (serve integrita' totale).
+        # a ticker that is NOT a member in this run simply doesn't count
+        # (neither for nor against) for this run; but if it is a member and
+        # not complete, it leaves the golden set for good (total integrity required).
         not_member = still_golden - members_this_run
         still_golden = complete_this_run | not_member
         per_run_complete_count.append((run_id, len(still_golden)))
@@ -94,22 +94,22 @@ def build_golden_set(
     pd.Series(golden, name="ticker").to_csv(out_dir / f"{out_name}.csv", index=False)
 
     with open(out_dir / f"{out_name}_summary.txt", "w") as f:
-        f.write(f"Golden set finale: {len(golden)} titoli\n")
+        f.write(f"Final golden set: {len(golden)} tickers\n")
         f.write(
-            f"Candidati iniziali (union membership {trading_start_first}..{trading_start_last}): "
+            f"Initial candidates (union membership {trading_start_first}..{trading_start_last}): "
             f"{len(candidates)}\n\n"
         )
-        f.write("Traiettoria (run, titoli ancora golden dopo questo run):\n")
+        f.write("Trajectory (run, tickers still golden after this run):\n")
         for run_id, n in per_run_complete_count:
             f.write(f"  {run_id}: {n}\n")
 
-    print(f"Golden set: {len(golden)} titoli su {len(candidates)} candidati")
-    print(f"Salvato in {out_dir / f'{out_name}.csv'} e {out_dir / f'{out_name}_summary.txt'}")
+    print(f"Golden set: {len(golden)} tickers out of {len(candidates)} candidates")
+    print(f"Saved to {out_dir / f'{out_name}.csv'} and {out_dir / f'{out_name}_summary.txt'}")
     if len(golden) < 100:
-        print("\nATTENZIONE: golden set sotto 100 titoli, potrebbe essere insufficiente")
-        print("per SSD/matching con abbastanza varieta'. Valutare di allentare il")
-        print("requisito 'zero giorni mancanti' a 'few giorni' o restringere la")
-        print("finestra di replica (es. 2005-2009 invece di 2003-2009).")
+        print("\nWARNING: golden set below 100 tickers, may be insufficient")
+        print("for SSD/matching with enough variety. Consider relaxing the")
+        print("'zero missing days' requirement to 'few days' or narrowing the")
+        print("replication window (e.g. 2005-2009 instead of 2003-2009).")
     return golden
 
 

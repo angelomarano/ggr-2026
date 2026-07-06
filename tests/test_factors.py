@@ -1,8 +1,8 @@
 """
-test_factors.py — assemble_factors (join dei dataset Ken French grezzi,
-conversione percentuale -> decimale) e load_factors (lettura cache + filtro
-range), SENZA accesso di rete: i "raw" dataset sono costruiti a mano con
-valori noti, la cache e' un parquet fittizio scritto in tmp_path.
+test_factors.py — assemble_factors (join of the raw Ken French datasets,
+percent -> decimal conversion) and load_factors (cache read + range
+filter), WITHOUT network access: the "raw" datasets are built by hand with
+known values, the cache is a fictitious parquet written to tmp_path.
 """
 import sys
 sys.path.insert(0, ".")
@@ -23,14 +23,14 @@ def _period_df(values: dict, months: list[str]) -> pd.DataFrame:
 
 def test_assemble_factors_percent_to_decimal_and_inner_join():
     """
-    3 dataset con copertura mensile leggermente diversa (Ken French a volte
-    pubblica Momentum/ST-Reversal con un mese di ritardo rispetto ai 3
-    fattori base):
+    3 datasets with slightly different monthly coverage (Ken French
+    sometimes publishes Momentum/ST-Reversal a month behind the 3 base
+    factors):
       FF3:    2020-01, 2020-02, 2020-03   (Mkt-RF, SMB, HML, RF in %)
-      Mom:    2020-01, 2020-02                       (manca 2020-03)
+      Mom:    2020-01, 2020-02                       (2020-03 missing)
       ST_Rev: 2020-01, 2020-02, 2020-03
-    Atteso: 2020-03 ESCLUSO (inner join: manca in Mom), 2020-01/02 presenti,
-    tutti i valori divisi per 100, indice = Timestamp di inizio mese.
+    Expected: 2020-03 EXCLUDED (inner join: missing in Mom), 2020-01/02
+    present, all values divided by 100, index = start-of-month Timestamp.
     """
     ff3 = _period_df(
         {"Mkt-RF": [1.0, -2.0, 3.0], "SMB": [0.5, 0.0, -0.5],
@@ -48,7 +48,7 @@ def test_assemble_factors_percent_to_decimal_and_inner_join():
     out = assemble_factors(raw)
 
     assert list(out.index) == [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-02-01")], \
-        "2020-03 va escluso: manca nel dataset Momentum (inner join)"
+        "2020-03 must be excluded: missing from the Momentum dataset (inner join)"
     assert list(out.columns) == ["Mkt-RF", "SMB", "HML", "RF", "Mom", "ST_Rev"]
 
     row0 = out.loc["2020-01-01"]
@@ -61,8 +61,8 @@ def test_assemble_factors_percent_to_decimal_and_inner_join():
 
 
 def test_load_factors_range_filter(tmp_path, monkeypatch):
-    """load_factors legge la cache e filtra [start, end] per mese; qui si usa
-    una cache fittizia (4 mesi) per evitare accesso di rete nel test."""
+    """load_factors reads the cache and filters [start, end] by month; a
+    fictitious cache (4 months) is used here to avoid network access in the test."""
     cache_file = tmp_path / "factors_test.parquet"
     idx = pd.DatetimeIndex(
         ["2019-11-01", "2019-12-01", "2020-01-01", "2020-02-01"], name="month"
@@ -80,8 +80,8 @@ def test_load_factors_range_filter(tmp_path, monkeypatch):
 
 
 def test_load_factors_missing_cache_raises(tmp_path, monkeypatch):
-    """Cache non ancora scaricata -> errore esplicito, non un crash generico
-    ne' un DataFrame vuoto silenzioso."""
+    """Cache not yet downloaded -> explicit error, not a generic crash nor a
+    silent empty DataFrame."""
     monkeypatch.setattr(factors_mod, "CACHE_PATH", tmp_path / "does_not_exist.parquet")
     with pytest.raises(FileNotFoundError):
         load_factors()
@@ -89,4 +89,4 @@ def test_load_factors_missing_cache_raises(tmp_path, monkeypatch):
 
 if __name__ == "__main__":
     test_assemble_factors_percent_to_decimal_and_inner_join()
-    print("test_factors: test puri OK (i test con tmp_path/monkeypatch richiedono pytest)")
+    print("test_factors: pure tests OK (tests with tmp_path/monkeypatch require pytest)")

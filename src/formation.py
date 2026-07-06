@@ -1,27 +1,27 @@
 """
-formation.py — Formation period GGR: indice di prezzo normalizzato per
-titolo, matrice SSD pairwise, selezione top-N e controllo 101-120.
+formation.py — GGR formation period: normalized price index per ticker,
+pairwise SSD matrix, top-N selection and 101-120 control.
 
 PROTOCOL.md §2.2:
-- P*_it = prod(1+r) sul formation, P*_i0=1 (build_price_index di trading.py,
-  riusata qui, non duplicata).
-- SSD_ij = sum_t (P*_it - P*_jt)^2 sui giorni del formation.
-- sigma_ij = std(spread) nel formation (spread = P*_i - P*_j), da passare
-  come input esterno e congelato a simulate_pair_same_day/wait_one_day.
+- P*_it = prod(1+r) over the formation period, P*_i0=1 (build_price_index
+  from trading.py, reused here, not duplicated).
+- SSD_ij = sum_t (P*_it - P*_jt)^2 over the formation days.
+- sigma_ij = std(spread) over the formation period (spread = P*_i - P*_j),
+  passed as a frozen external input to simulate_pair_same_day/wait_one_day.
 
-Tie-break SSD (non specificato da GGR, scelta dichiarata qui): a pari
-merito, ordine alfabetico crescente sulla coppia di ticker (prima ticker_1,
-poi ticker_2). Deterministico e riproducibile: itertools.combinations su
-ticker ordinati alfabeticamente gia' produce le coppie in quest'ordine, e un
-sort stabile (kind="stable") su ["ssd", "ticker_1", "ticker_2"] preserva
-l'ordinamento alfabetico a parita' di ssd.
+SSD tie-break (unspecified by GGR, choice declared here): on a tie,
+ascending alphabetical order on the ticker pair (ticker_1 first, then
+ticker_2). Deterministic and reproducible: itertools.combinations over
+alphabetically sorted tickers already produces pairs in this order, and a
+stable sort (kind="stable") on ["ssd", "ticker_1", "ticker_2"] preserves the
+alphabetical ordering on ties in ssd.
 
-sigma=0 (spread costante nel formation, es. due serie identiche o dati
-degeneri): la coppia viene ESCLUSA dal ranking con un warning. Motivazione:
-la soglia di apertura e' k*sigma; con sigma=0 la soglia e' 0 e qualunque
-spread diverso da zero (compreso il rumore numerico) farebbe scattare
-un'apertura, un comportamento degenere e non interpretabile come segnale.
-Escludere a monte evita di propagare il caso patologico a trading.py.
+sigma=0 (constant spread over the formation period, e.g. two identical
+series or degenerate data): the pair is EXCLUDED from the ranking with a
+warning. Rationale: the opening threshold is k*sigma; with sigma=0 the
+threshold is 0 and any nonzero spread (including numerical noise) would
+trigger an opening, a degenerate behavior not interpretable as a signal.
+Excluding it upstream avoids propagating the pathological case to trading.py.
 """
 from __future__ import annotations
 
@@ -38,40 +38,40 @@ from src.trading import build_price_index
 
 
 def normalized_price_indices(returns: pd.DataFrame) -> pd.DataFrame:
-    """returns: DataFrame (righe=giorni del formation, colonne=ticker),
-    rendimenti giornalieri semplici. Ritorna DataFrame (righe 0..n, colonne
-    =ticker) con l'indice normalizzato P*_i0=1, una colonna per ticker via
-    build_price_index (riuso, nessuna duplicazione della logica)."""
+    """returns: DataFrame (rows=formation days, columns=ticker), simple
+    daily returns. Returns a DataFrame (rows 0..n, columns=ticker) with the
+    normalized index P*_i0=1, one column per ticker via build_price_index
+    (reused, no duplicated logic)."""
     out = {tkr: build_price_index(returns[tkr].to_numpy()) for tkr in returns.columns}
     return pd.DataFrame(out)
 
 
 def ssd_matrix(price_index: pd.DataFrame) -> pd.DataFrame:
-    """SSD_ij = sum_t (P*_it - P*_jt)^2 su tutte le righe di price_index
-    (incluso il giorno 0 = ancora, dove tutte le serie valgono 1 e quindi
-    contribuiscono 0 alla somma: non altera il ranking, incluso per
-    semplicita' del calcolo vettorizzato)."""
+    """SSD_ij = sum_t (P*_it - P*_jt)^2 over all rows of price_index
+    (including day 0 = anchor, where every series equals 1 and thus
+    contributes 0 to the sum: it doesn't alter the ranking, included for
+    simplicity of the vectorized computation)."""
     tickers = price_index.columns.tolist()
-    P = price_index.to_numpy()  # righe=giorni, colonne=ticker
+    P = price_index.to_numpy()  # rows=days, columns=ticker
     diff = P[:, :, None] - P[:, None, :]
     ssd = np.sum(diff ** 2, axis=0)
     return pd.DataFrame(ssd, index=tickers, columns=tickers)
 
 
 def spread_sigma(price_index: pd.DataFrame, i: str, j: str) -> float:
-    """sigma dello spread P*_i - P*_j nel formation (ddof=0: GGR stima sigma
-    sull'intera finestra osservata, non su un campione da cui inferire una
-    popolazione piu' ampia)."""
+    """sigma of the spread P*_i - P*_j over the formation period (ddof=0: GGR
+    estimates sigma over the whole observed window, not from a sample used
+    to infer a larger population)."""
     spread = price_index[i] - price_index[j]
     return float(spread.std(ddof=0))
 
 
 def rank_pairs(price_index: pd.DataFrame) -> pd.DataFrame:
     """
-    Tutte le coppie i<j ordinate per SSD crescente. Colonne: ticker_1,
-    ticker_2, ssd, sigma. Indice = rank (1-indexed, coerente con la notazione
-    "coppie 101-120" del protocollo). Le coppie con sigma=0 sono escluse con
-    un warning (vedi docstring di modulo).
+    All pairs i<j sorted by ascending SSD. Columns: ticker_1, ticker_2, ssd,
+    sigma. Index = rank (1-indexed, consistent with the protocol's
+    "pairs 101-120" notation). Pairs with sigma=0 are excluded with a
+    warning (see module docstring).
     """
     tickers = sorted(price_index.columns)
     P = price_index[tickers]
@@ -82,8 +82,8 @@ def rank_pairs(price_index: pd.DataFrame) -> pd.DataFrame:
         sigma = spread_sigma(P, i, j)
         if sigma == 0.0:
             warnings.warn(
-                f"coppia ({i},{j}) esclusa dal ranking: sigma dello spread "
-                "nel formation e' zero (spread costante, trigger degenere)."
+                f"pair ({i},{j}) excluded from ranking: the spread's sigma "
+                "over the formation period is zero (constant spread, degenerate trigger)."
             )
             continue
         rows.append({"ticker_1": i, "ticker_2": j, "ssd": ssd.loc[i, j], "sigma": sigma})
@@ -102,17 +102,16 @@ def select_portfolios(
     control_range: tuple[int, int] = config.CONTROL_PAIRS_RANGE,
 ) -> dict[str, pd.DataFrame]:
     """
-    Ritorna {"top_5", "top_20", "control"}: sotto-tabelle di rank_pairs,
-    ciascuna con la colonna "sigma" (stimata sullo stesso formation period,
-    da passare congelata al trading period).
+    Returns {"top_5", "top_20", "control"}: sub-tables of rank_pairs, each
+    with the "sigma" column (estimated on the same formation period, to be
+    passed frozen to the trading period).
 
-    Se il numero di coppie disponibili (dopo l'esclusione sigma=0) e'
-    inferiore a top_n o control_range[0], le sotto-tabelle risultano piu'
-    corte del nominale (anche vuote per "control"): non e' un errore, e' un
-    universo insufficiente a riempire il portafoglio richiesto (puo'
-    succedere su un golden-set ridotto, PROTOCOL.md non lo esclude
-    esplicitamente ma presuppone un universo ampio) — nessuna eccezione,
-    nessun padding artificiale.
+    If the number of available pairs (after excluding sigma=0) is below
+    top_n or control_range[0], the sub-tables come out shorter than nominal
+    (possibly empty for "control"): this is not an error, it's a universe
+    insufficient to fill the requested portfolio (can happen on a reduced
+    golden set; PROTOCOL.md doesn't explicitly exclude it but assumes a
+    large universe) — no exception, no artificial padding.
     """
     ranked = rank_pairs(price_index)
     lo, hi = control_range
@@ -177,7 +176,7 @@ def _load_returns_window(
         p = price_dir / f"{t}.parquet"
         if not p.exists():
             if require_complete:
-                warnings.warn(f"{t}: nessun file prezzi in cache, escluso dal formation.")
+                warnings.warn(f"{t}: no price file in cache, excluded from formation.")
             continue
         s = pd.read_parquet(p, columns=["Adj Close"]).reindex(full_days)["Adj Close"]
         prices[t] = s
@@ -191,7 +190,7 @@ def _load_returns_window(
     if require_complete:
         incomplete = [c for c in returns.columns if returns[c].isna().any()]
         for t in incomplete:
-            warnings.warn(f"{t}: storico incompleto nel formation period, escluso.")
+            warnings.warn(f"{t}: incomplete history in the formation period, excluded.")
         returns = returns.drop(columns=incomplete)
 
         # Post-hoc data-quality filter (config.MAX_ABS_DAILY_RETURN, see
@@ -205,8 +204,8 @@ def _load_returns_window(
         extreme = [c for c in returns.columns if (returns[c].abs() > config.MAX_ABS_DAILY_RETURN).any()]
         for t in extreme:
             warnings.warn(
-                f"{t}: rendimento giornaliero oltre {config.MAX_ABS_DAILY_RETURN:.0%} "
-                "nel formation period, escluso (dato verosimilmente corrotto)."
+                f"{t}: daily return beyond {config.MAX_ABS_DAILY_RETURN:.0%} "
+                "in the formation period, excluded (likely corrupted data)."
             )
         returns = returns.drop(columns=extreme)
 
@@ -229,8 +228,8 @@ def _load_returns_window(
         ]
         for t in frozen:
             warnings.warn(
-                f"{t}: prezzo congelato per oltre {config.MAX_CONSECUTIVE_FROZEN_DAYS} giorni "
-                "consecutivi nel formation period, escluso (dato verosimilmente corrotto)."
+                f"{t}: price frozen for more than {config.MAX_CONSECUTIVE_FROZEN_DAYS} consecutive "
+                "days in the formation period, excluded (likely corrupted data)."
             )
         returns = returns.drop(columns=frozen)
     return returns
@@ -240,14 +239,14 @@ def load_formation_returns(
     tickers: list[str], formation_start, formation_end, price_dir: Path = PRICES_DIR,
 ) -> pd.DataFrame:
     """
-    Rendimenti giornalieri semplici (Adj Close) di `tickers` nel formation
-    period [formation_start, formation_end], allineati al calendario di
-    mercato (proxy: indice ^GSPC cachato in price_dir, riuso di
-    data.prices._reference_days, nessuna duplicazione). Un ticker con
-    storico incompleto in questa finestra o assente dalla cache viene
-    escluso con un warning (il filtro "no-trade days" dell'universo e'
-    responsabilita' di data/prices.py; qui si applica la stessa logica
-    localmente, a difesa, sul sotto-insieme di ticker richiesto).
+    Simple daily returns (Adj Close) of `tickers` in the formation period
+    [formation_start, formation_end], aligned to the market calendar
+    (proxy: ^GSPC index cached in price_dir, reusing
+    data.prices._reference_days, no duplication). A ticker with incomplete
+    history in this window or absent from the cache is excluded with a
+    warning (the universe's "no-trade days" filter is data/prices.py's
+    responsibility; here the same logic is applied locally, defensively,
+    on the requested subset of tickers).
 
     One row per reference trading day in [formation_start, formation_end]
     (see _load_returns_window).
@@ -278,8 +277,8 @@ def select_pairs_for_formation(
     top_n: int = config.TOP_PAIRS,
     control_range: tuple[int, int] = config.CONTROL_PAIRS_RANGE,
 ) -> dict[str, pd.DataFrame]:
-    """Pipeline completa: ticker + finestra di formation -> {top_5, top_20,
-    control}. Orchestratore di load_formation_returns + normalized_price_indices
+    """Full pipeline: tickers + formation window -> {top_5, top_20,
+    control}. Orchestrates load_formation_returns + normalized_price_indices
     + select_portfolios."""
     returns = load_formation_returns(tickers, formation_start, formation_end, price_dir)
     price_index = normalized_price_indices(returns)

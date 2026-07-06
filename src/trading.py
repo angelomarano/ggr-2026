@@ -1,12 +1,11 @@
 """
-trading.py — Motore GGR: indice di prezzo normalizzato, trigger di apertura,
-chiusura al crossing, evoluzione dei pesi (mark-to-market, buy-and-hold entro
-il trade). Due varianti di esecuzione (PROTOCOL.md §2.1): SAME-DAY e
-WAIT-ONE-DAY.
+trading.py — GGR engine: normalized price index, opening trigger, closing on
+crossing, weight evolution (mark-to-market, buy-and-hold within the trade).
+Two execution variants (PROTOCOL.md §2.1): SAME-DAY and WAIT-ONE-DAY.
 
-Convenzione (PROTOCOL.md, §2.2 + task W2): entrambe le gambe si
-ri-normalizzano a 1 al primo giorno del trading period; sigma e' stimata
-SOLO sul formation e passata come input esterno, congelata.
+Convention (PROTOCOL.md, §2.2 + task W2): both legs re-normalize to 1 on the
+first day of the trading period; sigma is estimated ONLY on the formation
+period and passed in as a frozen external input.
 """
 from __future__ import annotations
 
@@ -14,7 +13,7 @@ import numpy as np
 
 
 def build_price_index(returns: np.ndarray) -> np.ndarray:
-    """P[0]=1 (ancora di rinormalizzazione); P[t]=P[t-1]*(1+returns[t-1])."""
+    """P[0]=1 (re-normalization anchor); P[t]=P[t-1]*(1+returns[t-1])."""
     P = np.empty(len(returns) + 1)
     P[0] = 1.0
     for t, r in enumerate(returns, start=1):
@@ -24,16 +23,16 @@ def build_price_index(returns: np.ndarray) -> np.ndarray:
 
 def _last_valid_day(returns_1: np.ndarray, returns_2: np.ndarray) -> int:
     """
-    Ultimo giorno (1-indexed) in cui ENTRAMBE le gambe hanno un rendimento
-    valido (PROTOCOL.md §1.4/§2.2: un titolo che delista a meta' trading
-    period smette di avere prezzi, non di generare rumore).
+    Last day (1-indexed) on which BOTH legs have a valid return (PROTOCOL.md
+    §1.4/§2.2: a stock that delists mid-trading-period stops having prices,
+    not stops generating noise).
 
-    Se returns_1 o returns_2 hanno un NaN a partire dalla posizione 0-indexed
-    m, il prezzo del giorno m+1 e' indefinito per quella gamba: l'ultimo
-    giorno con prezzi validi per ENTRAMBE le gambe e' il giorno m (1-indexed)
-    — che coincide numericamente con la posizione 0-indexed del primo NaN,
-    perche' returns[j] e' il rendimento che porta da P[j] a P[j+1].
-    Nessun NaN -> l'intero periodo e' valido, ritorna n.
+    If returns_1 or returns_2 have a NaN starting at 0-indexed position m,
+    the price for day m+1 is undefined for that leg: the last day with valid
+    prices for BOTH legs is day m (1-indexed) — which numerically coincides
+    with the 0-indexed position of the first NaN, because returns[j] is the
+    return that carries P[j] to P[j+1].
+    No NaN -> the whole period is valid, return n.
     """
     nan_mask = np.isnan(returns_1) | np.isnan(returns_2)
     if not nan_mask.any():
@@ -48,31 +47,31 @@ def simulate_pair_same_day(
     k: float = 2.0,
 ) -> dict:
     """
-    Simula una coppia GGR sul trading period, esecuzione same-day.
+    Simulates a GGR pair over the trading period, same-day execution.
 
-    returns_1, returns_2: rendimenti giornalieri semplici, indice 0 = giorno
-        1 del trading period (il rendimento che porta da P=1 dell'ancora
-        al primo prezzo osservato).
-    sigma: deviazione standard dello spread stimata SUL FORMATION (esterna).
-    k: soglia in deviazioni standard (default 2, congelato da protocollo).
+    returns_1, returns_2: simple daily returns, index 0 = day 1 of the
+        trading period (the return that carries the anchor P=1 to the
+        first observed price).
+    sigma: standard deviation of the spread estimated ON THE FORMATION
+        period (external input).
+    k: threshold in standard deviations (default 2, frozen by protocol).
 
-    Delisting a meta' periodo (un NaN in returns_1/returns_2 da un certo
-    giorno in poi, PROTOCOL.md §1.4/§2.2): se una posizione e' aperta
-    quando i prezzi finiscono, si chiude forzatamente all'ULTIMO prezzo
-    valido (evento "close", reason="delisting"); se non e' aperta, la
-    coppia smette semplicemente di generare segnali da quel giorno in poi
-    (il loop si ferma li', nessun trade successivo e' possibile senza
-    prezzi validi per entrambe le gambe).
+    Mid-period delisting (a NaN in returns_1/returns_2 from a certain day
+    onward, PROTOCOL.md §1.4/§2.2): if a position is open when prices run
+    out, it is forcibly closed at the LAST valid price (event "close",
+    reason="delisting"); if no position is open, the pair simply stops
+    generating signals from that day onward (the loop stops there, no
+    further trade is possible without valid prices for both legs).
 
-    Ritorna: P1, P2, spread (indice 0..n), daily_payoff (indice 0..n-1,
-    payoff realizzato il giorno t+1), daily_long_payoff/daily_short_payoff
-    (contributo di ciascuna gamba al payoff, w_long*r_long e w_short*r_short:
-    daily_payoff = daily_long_payoff - daily_short_payoff; usati per la
-    decomposizione alpha long/short, PROTOCOL.md §2.4), trade log, payoff
-    cumulato.
+    Returns: P1, P2, spread (index 0..n), daily_payoff (index 0..n-1,
+    payoff realized on day t+1), daily_long_payoff/daily_short_payoff
+    (each leg's contribution to the payoff, w_long*r_long and w_short*r_short:
+    daily_payoff = daily_long_payoff - daily_short_payoff; used for the
+    long/short alpha decomposition, PROTOCOL.md §2.4), trade log, cumulative
+    payoff.
     """
     n = len(returns_1)
-    assert len(returns_2) == n, "le due serie devono avere la stessa lunghezza"
+    assert len(returns_2) == n, "the two series must have the same length"
     last_day = _last_valid_day(returns_1, returns_2)
 
     P1 = build_price_index(returns_1)
@@ -81,7 +80,7 @@ def simulate_pair_same_day(
     threshold = k * sigma
 
     is_open = False
-    long_leg = None  # 1 o 2: quale gamba e' long
+    long_leg = None  # 1 or 2: which leg is long
     w_long = w_short = 0.0
     daily_payoff = np.zeros(n)
     daily_long_payoff = np.zeros(n)
@@ -119,13 +118,13 @@ def simulate_pair_same_day(
             trades.append({"event": "open", "day": t, "direction": "long1_short2", "spread": spread[t]})
 
         if is_open and t == last_day:
-            # Apertura nell'ULTIMO giorno valido (fine periodo o delisting):
-            # nessun giorno successivo per marcare a mercato la posizione,
-            # quindi si chiude nella STESSA iterazione (durata zero, payoff
-            # zero) invece di lasciare un "open" senza "close" abbinato nel
-            # trade log (bug: senza questo, is_open resterebbe True oltre il
-            # return della funzione e round-trip/durata a valle sarebbero
-            # calcolati su un trade fantasma mai chiuso).
+            # Opening on the LAST valid day (end of period or delisting):
+            # no following day to mark the position to market, so it closes
+            # in the SAME iteration (zero duration, zero payoff) instead of
+            # leaving an "open" without a matching "close" in the trade log
+            # (bug: without this, is_open would stay True past the function's
+            # return and downstream round-trip/duration would be computed on
+            # a phantom trade that never closed).
             reason = "delisting" if last_day < n else "end_of_period"
             trades.append({"event": "close", "day": t, "spread": spread[t], "reason": reason})
             is_open, long_leg = False, None
@@ -146,34 +145,32 @@ def simulate_pair_wait_one_day(
     k: float = 2.0,
 ) -> dict:
     """
-    Simula una coppia GGR sul trading period, esecuzione wait-one-day.
+    Simulates a GGR pair over the trading period, wait-one-day execution.
 
-    Segnale osservato al giorno t (|spread_t| > k*sigma); esecuzione tentata
-    al giorno t+1. Se al giorno t+1 lo spread e' gia' rientrato sotto soglia
-    o ha attraversato lo zero (cioe' non e' piu' oltre soglia nello stesso
-    verso del segnale), il trade NON si apre: occasione persa, loggata come
-    evento "missed" (nessun payoff, nessuna posizione aperta). Altrimenti la
-    posizione apre al giorno t+1 (pesi=1, nessun payoff quel giorno, come
-    all'apertura same-day) e da li' in poi segue esattamente la stessa
-    meccanica di simulate_pair_same_day (mark-to-market, crossing, fine
-    periodo).
+    Signal observed on day t (|spread_t| > k*sigma); execution attempted on
+    day t+1. If on day t+1 the spread has already fallen back below the
+    threshold or crossed zero (i.e. it is no longer past the threshold in
+    the same direction as the signal), the trade does NOT open: a missed
+    opportunity, logged as a "missed" event (no payoff, no open position).
+    Otherwise the position opens on day t+1 (weights=1, no payoff that day,
+    same as a same-day opening) and from there on follows exactly the same
+    mechanics as simulate_pair_same_day (mark-to-market, crossing, end of
+    period).
 
-    returns_1, returns_2, sigma, k: vedi simulate_pair_same_day.
+    returns_1, returns_2, sigma, k: see simulate_pair_same_day.
 
-    Delisting a meta' periodo: stessa gestione di simulate_pair_same_day
-    (vedi la sua docstring) — chiusura forzata all'ultimo prezzo valido se
-    una posizione e' aperta, altrimenti la coppia smette semplicemente di
-    generare segnali (e un eventuale segnale "pending" in attesa di
-    conferma scade silenziosamente, non diversamente da un segnale mai
-    confermato entro la fine ordinaria del periodo).
+    Mid-period delisting: same handling as simulate_pair_same_day (see its
+    docstring) — forced closure at the last valid price if a position is
+    open, otherwise the pair simply stops generating signals (and any
+    "pending" signal awaiting confirmation silently expires, no differently
+    from a signal never confirmed by the ordinary end of the period).
 
-    Ritorna: stesso schema di simulate_pair_same_day (incluse
-    daily_long_payoff/daily_short_payoff); gli eventi "open" portano anche
-    "signal_day" (il giorno in cui il segnale e' stato osservato, un giorno
-    prima dell'apertura).
+    Returns: same schema as simulate_pair_same_day (including
+    daily_long_payoff/daily_short_payoff); "open" events also carry
+    "signal_day" (the day the signal was observed, one day before opening).
     """
     n = len(returns_1)
-    assert len(returns_2) == n, "le due serie devono avere la stessa lunghezza"
+    assert len(returns_2) == n, "the two series must have the same length"
     last_day = _last_valid_day(returns_1, returns_2)
 
     P1 = build_price_index(returns_1)
@@ -182,9 +179,9 @@ def simulate_pair_wait_one_day(
     threshold = k * sigma
 
     is_open = False
-    long_leg = None  # 1 o 2: quale gamba e' long
+    long_leg = None  # 1 or 2: which leg is long
     w_long = w_short = 0.0
-    pending: dict | None = None  # segnale osservato, in attesa di esecuzione il giorno dopo
+    pending: dict | None = None  # signal observed, awaiting execution the next day
     daily_payoff = np.zeros(n)
     daily_long_payoff = np.zeros(n)
     daily_short_payoff = np.zeros(n)
@@ -223,9 +220,9 @@ def simulate_pair_wait_one_day(
                 })
                 pending = None
                 if t == last_day:
-                    # Vedi commento in simulate_pair_same_day: apertura
-                    # nell'ultimo giorno valido -> chiusura nella stessa
-                    # iterazione, nessun "open" senza "close" abbinato.
+                    # See comment in simulate_pair_same_day: opening on the
+                    # last valid day -> closes in the same iteration, no
+                    # "open" without a matching "close".
                     reason = "delisting" if last_day < n else "end_of_period"
                     trades.append({"event": "close", "day": t, "spread": spread[t], "reason": reason})
                     is_open, long_leg = False, None
@@ -247,7 +244,7 @@ def simulate_pair_wait_one_day(
                 "spread": spread[t], "signal_day": pending["signal_day"],
             })
             pending = None
-            # non si "consuma" il giorno: la stessa barra puo' generare un nuovo segnale
+            # the day is not "consumed": the same bar can generate a new signal
 
         if spread[t] > threshold:
             pending = {"direction": "long2_short1", "signal_day": t}

@@ -2,24 +2,23 @@
 test_inference.py — newey_west_mean_test, stationary_bootstrap_ci,
 factor_regression.
 
-Nota sul metodo di verifica (vedi anche il modulo docstring di inference.py):
-uno stimatore HAC (Newey-West) e' una somma pesata di autocovarianze
-campionarie fino a `lags` ritardi con pesi di Bartlett — calcolarlo "a mano"
-in un test significherebbe reimplementare la stessa formula che il modulo
-gia' delega a statsmodels, senza validarla contro una verita' indipendente:
-non aggiungerebbe nessuna garanzia. La verifica che sostituisce il calcolo a
-mano qui e': (1) su un caso SENZA rumore, l'OLS deve recuperare i
-coefficienti ESATTI (questo e' verificabile a mano, R^2=1); (2) su un caso
-CON rumore, l'output della funzione deve coincidere con una chiamata DIRETTA
-e indipendente a statsmodels con gli stessi parametri (stesso cov_type,
-stessi maxlags) — questo verifica che il nostro wrapper passi i parametri
-giusti e legga gli attributi giusti (params/bse/tvalues nell'ordine
-corretto), che e' la superficie di bug plausibile in un wrapper, mentre la
-correttezza della formula HAC in se' e' responsabilita' di statsmodels.
-Lo stesso ragionamento si applica al block bootstrap: la sua distribuzione
-e' intrinsecamente casuale, quindi si verifica (a) un caso degenere
-(serie costante) il cui risultato E' calcolabile a mano esattamente, e (b)
-la riproducibilita' bit-esatta a parita' di seed.
+Note on the verification method (see also inference.py's module docstring):
+a HAC (Newey-West) estimator is a weighted sum of sample autocovariances up
+to `lags` lags with Bartlett weights — computing it "by hand" in a test
+would mean reimplementing the same formula the module already delegates to
+statsmodels, without validating it against an independent truth: it
+wouldn't add any guarantee. The verification used here instead is: (1) on a
+NOISE-FREE case, the OLS must recover the EXACT coefficients (this is
+verifiable by hand, R^2=1); (2) on a case WITH noise, the function's output
+must match a DIRECT, independent call to statsmodels with the same
+parameters (same cov_type, same maxlags) — this verifies that our wrapper
+passes the right parameters and reads the right attributes (params/bse/
+tvalues in the correct order), which is the plausible bug surface in a
+wrapper, while the correctness of the HAC formula itself is statsmodels'
+responsibility. The same reasoning applies to the block bootstrap: its
+distribution is inherently random, so we verify (a) a degenerate case
+(constant series) whose result CAN be computed exactly by hand, and (b)
+bit-exact reproducibility for the same seed.
 """
 import sys
 sys.path.insert(0, ".")
@@ -41,9 +40,9 @@ TOL = 1e-9
 
 
 def test_newey_west_mean_matches_direct_statsmodels_call():
-    """Caso di riferimento: 24 rendimenti mensili pseudo-casuali (seed
-    fisso). L'output di newey_west_mean_test deve coincidere ESATTAMENTE con
-    una chiamata diretta a sm.OLS(y, costante).fit(cov_type='HAC', ...)."""
+    """Reference case: 24 pseudo-random monthly returns (fixed seed). The
+    output of newey_west_mean_test must EXACTLY match a direct call to
+    sm.OLS(y, constant).fit(cov_type='HAC', ...)."""
     rng = np.random.default_rng(42)
     y = rng.normal(0.005, 0.02, size=24)
 
@@ -58,8 +57,8 @@ def test_newey_west_mean_matches_direct_statsmodels_call():
 
 
 def test_newey_west_mean_sign_and_magnitude_sanity():
-    """Serie con media chiaramente positiva e bassa varianza -> t-stat
-    grande e positivo (sanity check indipendente dal confronto diretto)."""
+    """Series with clearly positive mean and low variance -> large positive
+    t-stat (sanity check independent of the direct comparison)."""
     y = np.array([0.01, 0.012, 0.009, 0.011, 0.010, 0.0105, 0.0095, 0.0115] * 3)
     out = newey_west_mean_test(y, lags=6)
     assert out["mean"] > 0.009
@@ -68,11 +67,11 @@ def test_newey_west_mean_sign_and_magnitude_sanity():
 
 def test_stationary_bootstrap_constant_series_exact():
     """
-    Caso degenere calcolabile A MANO: se la serie e' costante (tutti i
-    valori = c), QUALUNQUE ricampionamento (qualunque blocco, qualunque
-    indice) produce una media ricampionata identica a c. Quindi l'IC deve
-    collassare esattamente a un punto: ci_low == ci_high == mean == c, per
-    costruzione, indipendentemente dalla casualita' del bootstrap.
+    Degenerate case computable BY HAND: if the series is constant (all
+    values = c), ANY resampling (any block, any index) produces a
+    resampled mean identical to c. So the CI must collapse exactly to a
+    point: ci_low == ci_high == mean == c, by construction, regardless of
+    the bootstrap's randomness.
     """
     c = 0.0123
     y = np.full(20, c)
@@ -83,8 +82,8 @@ def test_stationary_bootstrap_constant_series_exact():
 
 
 def test_stationary_bootstrap_reproducible_with_same_seed():
-    """A parita' di seed, la replica bootstrap deve essere bit-riproducibile
-    (nessuna sorgente di casualita' non seedata)."""
+    """For the same seed, the bootstrap replication must be bit-reproducible
+    (no unseeded source of randomness)."""
     rng = np.random.default_rng(7)
     y = rng.normal(0.01, 0.03, size=36)
     out1 = stationary_bootstrap_ci(y, n_reps=500, seed=123)
@@ -95,9 +94,9 @@ def test_stationary_bootstrap_reproducible_with_same_seed():
 
 
 def test_stationary_bootstrap_ci_contains_sample_mean_on_symmetric_data():
-    """Sanity check strutturale (non un calcolo a mano): su dati simmetrici
-    a bassa asimmetria e abbastanza repliche, l'IC percentile deve contenere
-    la media campionaria."""
+    """Structural sanity check (not a hand computation): on symmetric,
+    low-skew data with enough replications, the percentile CI must contain
+    the sample mean."""
     rng = np.random.default_rng(99)
     y = rng.normal(0.01, 0.02, size=48)
     out = stationary_bootstrap_ci(y, n_reps=2000, seed=99)
@@ -106,9 +105,9 @@ def test_stationary_bootstrap_ci_contains_sample_mean_on_symmetric_data():
 
 def test_factor_regression_exact_recovery_without_noise():
     """
-    Caso SENZA rumore, calcolabile a mano: y = alpha_true + sum(beta_true_k *
-    factor_k), ESATTAMENTE, per 30 mesi. L'OLS deve recuperare alpha e i
-    loadings ESATTI (entro tolleranza numerica) e R^2 = 1.
+    NOISE-FREE case, computable by hand: y = alpha_true + sum(beta_true_k *
+    factor_k), EXACTLY, for 30 months. The OLS must recover the EXACT alpha
+    and loadings (within numerical tolerance) and R^2 = 1.
     """
     rng = np.random.default_rng(5)
     months = pd.date_range("2010-01-01", periods=30, freq="MS")
@@ -132,9 +131,9 @@ def test_factor_regression_exact_recovery_without_noise():
 
 
 def test_factor_regression_matches_direct_statsmodels_call_with_noise():
-    """Caso CON rumore: l'output deve coincidere con una chiamata diretta e
-    indipendente a statsmodels (stesso motivo del test NW: verifica il
-    wiring del wrapper, non la formula HAC in se')."""
+    """Case WITH noise: the output must match a direct, independent call to
+    statsmodels (same reasoning as the NW test: verifies the wrapper's
+    wiring, not the HAC formula itself)."""
     rng = np.random.default_rng(11)
     months = pd.date_range("2015-01-01", periods=40, freq="MS")
     factor_cols = ["Mkt-RF", "SMB", "HML", "Mom", "ST_Rev"]
@@ -160,17 +159,18 @@ def test_factor_regression_matches_direct_statsmodels_call_with_noise():
 
 
 def test_factor_regression_drops_months_missing_in_factors():
-    """Due mesi presenti in excess_returns ma assenti in factors (Ken French
-    non ancora aggiornata) vanno scartati (inner join), non devono produrre
-    NaN ne' un errore. Dati non degeneri (10 mesi con fattori che variano
-    davvero) per evitare un sistema rank-deficient come nel test precedente
-    a rumore zero, qui serve solo a verificare l'allineamento, non il fit."""
+    """Two months present in excess_returns but absent from factors (Ken
+    French not yet updated) must be dropped (inner join), and must not
+    produce a NaN or an error. Non-degenerate data (10 months with factors
+    that actually vary) to avoid a rank-deficient system like the previous
+    zero-noise test; here it's only meant to verify the alignment, not the
+    fit."""
     rng = np.random.default_rng(3)
     months = pd.date_range("2020-01-01", periods=10, freq="MS")
     factor_cols = ["Mkt-RF", "SMB", "HML", "Mom", "ST_Rev"]
     factors = pd.DataFrame(
         rng.normal(0, 0.02, size=(8, 5)), index=months[:8], columns=factor_cols
-    )  # mancano gli ultimi 2 mesi
+    )  # last 2 months are missing
     y = pd.Series(rng.normal(0.01, 0.005, size=10), index=months)
 
     out = factor_regression(y, factors, factor_cols=tuple(factor_cols))
@@ -181,21 +181,21 @@ def test_factor_regression_drops_months_missing_in_factors():
 
 def test_long_short_leg_regression_recovers_known_drift():
     """
-    Decomposizione alpha long/short (PROTOCOL.md §2.4, punto 2): costruita
-    con un drift NOTO per costruzione, entro tolleranza (non esatto: c'e'
-    rumore, quindi non e' un caso a mano come il recupero esatto senza
-    rumore di factor_regression, ma il drift iniettato e' comunque noto e
-    la stima deve avvicinarvisi entro una tolleranza dettata dall'errore
-    standard atteso, non entro epsilon numerico).
+    Long/short alpha decomposition (PROTOCOL.md §2.4, point 2): built with a
+    drift KNOWN by construction, within tolerance (not exact: there is
+    noise, so this isn't a hand-computed case like factor_regression's
+    exact noise-free recovery, but the injected drift is still known and
+    the estimate must approach it within a tolerance dictated by the
+    expected standard error, not within numerical epsilon).
 
-    200 mesi, rumore idiosincratico std=0.008 (=> SE atteso della media
-    ~0.008/sqrt(200)=0.00057, la tolleranza 0.0015 e' ~2.6 SE, ampiamente
-    sufficiente per un seed fisso):
-      long_returns  = rumore puro attorno a +0.0002 (alpha atteso ~0,
-                      "non significativo" nello spirito di GGR Tabella 7)
-      short_returns = rumore attorno a -0.005 (drift negativo NOTO, atteso
-                      "significativo": e' il leg che genera il profitto
-                      quando lo si shorta)
+    200 months, idiosyncratic noise std=0.008 (=> expected SE of the mean
+    ~0.008/sqrt(200)=0.00057, the 0.0015 tolerance is ~2.6 SE, comfortably
+    enough for a fixed seed):
+      long_returns  = pure noise around +0.0002 (alpha expected ~0,
+                      "not significant" in the spirit of GGR Table 7)
+      short_returns = noise around -0.005 (KNOWN negative drift, expected
+                      to be "significant": it's the leg that generates the
+                      profit when shorted)
     """
     rng = np.random.default_rng(21)
     months = pd.date_range("2000-01-01", periods=200, freq="MS")
@@ -214,40 +214,40 @@ def test_long_short_leg_regression_recovers_known_drift():
     assert abs(out["long"]["alpha"] - long_drift) < 0.0015
     assert abs(out["short"]["alpha"] - short_drift) < 0.0015
     assert out["short"]["alpha"] < out["long"]["alpha"], \
-        "la gamba short deve mostrare il drift negativo, la long deve restare vicina a zero"
+        "the short leg must show the negative drift, the long leg must stay near zero"
     assert out["long"]["n_obs"] == 200 and out["short"]["n_obs"] == 200
 
 
 def test_decile_of_returns_hand_computed():
     """
-    Universo fittizio di 20 titoli, rendimenti del mese precedente = 0..19
-    (equispaziati) -> con 10 decili, pd.qcut deve assegnare ESATTAMENTE 2
-    titoli per decile (T00,T01)->decile1, (T02,T03)->decile2, ...,
-    (T18,T19)->decile10. Decili noti a mano, nessuna ambiguita'.
+    Fictitious universe of 20 tickers, prior-month returns = 0..19
+    (evenly spaced) -> with 10 deciles, pd.qcut must assign EXACTLY 2
+    tickers per decile (T00,T01)->decile1, (T02,T03)->decile2, ...,
+    (T18,T19)->decile10. Deciles known by hand, no ambiguity.
     """
     tickers = [f"T{i:02d}" for i in range(20)]
     prior_returns = pd.Series(np.arange(20, dtype=float), index=tickers)
     deciles = decile_of_returns(prior_returns, n_deciles=10)
 
-    assert (deciles.value_counts() == 2).all(), "10 decili x 2 titoli ciascuno, nessuno sbilanciato"
+    assert (deciles.value_counts() == 2).all(), "10 deciles x 2 tickers each, none unbalanced"
     assert deciles.loc["T00"] == deciles.loc["T01"] == 1
     assert deciles.loc["T18"] == deciles.loc["T19"] == 10
-    assert deciles.loc["T00"] != deciles.loc["T02"], "decili adiacenti devono restare distinti"
+    assert deciles.loc["T00"] != deciles.loc["T02"], "adjacent deciles must stay distinct"
 
 
 def test_decile_matched_bootstrap_respects_decile_constraint():
     """
-    Falsificazione bootstrap (PROTOCOL.md §2.4, punto 1): su 50 repliche di
-    2 coppie vere, OGNI titolo fittizio sostituito deve appartenere ALLO
-    STESSO decile del titolo vero che rimpiazza — verificato su TUTTE le
-    repliche, non solo in media (il vincolo e' per costruzione, deve valere
-    sempre, non statisticamente).
+    Bootstrap falsification (PROTOCOL.md §2.4, point 1): over 50
+    replications of 2 real pairs, EVERY substituted fictitious ticker must
+    belong to THE SAME decile as the real ticker it replaces — verified on
+    ALL replications, not just on average (the constraint holds by
+    construction, it must always hold, not just statistically).
     """
     tickers = [f"T{i:02d}" for i in range(20)]
     prior_returns = pd.Series(np.arange(20, dtype=float), index=tickers)
     deciles = decile_of_returns(prior_returns, n_deciles=10)
 
-    selected_pairs = [("T00", "T19"), ("T05", "T14")]  # decile1 e decile10; decile3 e decile8
+    selected_pairs = [("T00", "T19"), ("T05", "T14")]  # decile1 & decile10; decile3 & decile8
     reps = decile_matched_bootstrap_pairs(
         selected_pairs, prior_returns, n_deciles=10, n_reps=50, seed=0
     )
@@ -257,14 +257,14 @@ def test_decile_matched_bootstrap_respects_decile_constraint():
         assert len(rep) == len(selected_pairs)
         for (t1_true, t2_true), (t1_fake, t2_fake) in zip(selected_pairs, rep):
             assert deciles.loc[t1_fake] == deciles.loc[t1_true], \
-                f"{t1_fake} non e' nello stesso decile di {t1_true}"
+                f"{t1_fake} is not in the same decile as {t1_true}"
             assert deciles.loc[t2_fake] == deciles.loc[t2_true], \
-                f"{t2_fake} non e' nello stesso decile di {t2_true}"
+                f"{t2_fake} is not in the same decile as {t2_true}"
 
 
 def test_decile_matched_bootstrap_reproducible_with_same_seed():
-    """A parita' di seed, l'assegnazione dei titoli fittizi deve essere
-    bit-riproducibile (nessuna sorgente di casualita' non seedata)."""
+    """For the same seed, the fictitious-ticker assignment must be
+    bit-reproducible (no unseeded source of randomness)."""
     tickers = [f"T{i:02d}" for i in range(20)]
     prior_returns = pd.Series(np.arange(20, dtype=float), index=tickers)
     selected_pairs = [("T00", "T19"), ("T05", "T14")]
@@ -275,9 +275,9 @@ def test_decile_matched_bootstrap_reproducible_with_same_seed():
 
 
 def test_decile_matched_bootstrap_singleton_decile_returns_itself():
-    """Caso limite: se n_deciles == n_titoli, ogni titolo e' l'unico membro
-    del proprio decile -> l'unica sostituzione possibile e' il titolo
-    stesso, nessun crash (nessuna alternativa nel pool)."""
+    """Edge case: if n_deciles == n_tickers, each ticker is the only member
+    of its own decile -> the only possible substitution is the ticker
+    itself, no crash (no alternative in the pool)."""
     tickers = [f"T{i:02d}" for i in range(10)]
     prior_returns = pd.Series(np.arange(10, dtype=float), index=tickers)
     selected_pairs = [("T02", "T07")]
@@ -302,4 +302,4 @@ if __name__ == "__main__":
     test_decile_matched_bootstrap_respects_decile_constraint()
     test_decile_matched_bootstrap_reproducible_with_same_seed()
     test_decile_matched_bootstrap_singleton_decile_returns_itself()
-    print("test_inference: tutti i test PASSATI.")
+    print("test_inference: all tests PASSED.")

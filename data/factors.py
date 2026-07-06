@@ -1,16 +1,17 @@
 """
-factors.py — Fattori Fama-French 3 + Momentum + Short-Term Reversal (Ken French
-Data Library, via pandas-datareader) + risk-free rate (RF), frequenza mensile.
+factors.py — Fama-French 3 factors + Momentum + Short-Term Reversal (Ken French
+Data Library, via pandas-datareader) + risk-free rate (RF), monthly frequency.
 
-Uso:
-    python -m data.factors     # scarica e cache la Parquet locale
+Usage:
+    python -m data.factors     # downloads and caches the local Parquet
 
-Cache locale in Parquet (config.FACTORS_CACHE): nessun accesso di rete nei
-test ne' nei run successivi al primo download.
+Local Parquet cache (config.FACTORS_CACHE): no network access in tests nor
+in runs after the first download.
 
-Conversione: Ken French pubblica i fattori in percentuale (es. -0.11 = -0.11%
-mensile); qui si converte a frazione decimale (-0.0011) per coerenza con le
-serie di rendimento del resto della pipeline (src/trading.py, src/returns.py).
+Conversion: Ken French publishes factors as percentages (e.g. -0.11 = -0.11%
+monthly); here they are converted to a decimal fraction (-0.0011) for
+consistency with the return series in the rest of the pipeline
+(src/trading.py, src/returns.py).
 """
 from __future__ import annotations
 
@@ -22,9 +23,9 @@ import config
 
 CACHE_PATH = Path(config.FACTORS_CACHE)
 
-# Dataset Ken French da scaricare (nome esatto pandas_datareader -> colonne
-# rilevanti). "F-F_Research_Data_Factors" porta anche RF (risk-free), non
-# serve un dataset a parte.
+# Ken French datasets to download (exact pandas_datareader name -> relevant
+# columns). "F-F_Research_Data_Factors" also carries RF (risk-free), no
+# separate dataset is needed.
 _DATASETS = {
     "F-F_Research_Data_Factors": ["Mkt-RF", "SMB", "HML", "RF"],
     "F-F_Momentum_Factor": ["Mom"],
@@ -34,16 +35,16 @@ _DATASETS = {
 
 def assemble_factors(raw: dict[str, pd.DataFrame]) -> pd.DataFrame:
     """
-    Unisce i DataFrame grezzi di pandas_datareader (uno per dataset Ken
-    French elencato in _DATASETS, colonne come indicato, indice PeriodIndex
-    mensile), converte da percentuale a frazione decimale e normalizza
-    l'indice a Timestamp di inizio mese (coerente col resto della pipeline,
-    che usa pd.Timestamp ovunque, mai PeriodIndex).
+    Merges the raw pandas_datareader DataFrames (one per Ken French dataset
+    listed in _DATASETS, columns as indicated, monthly PeriodIndex), converts
+    from percentage to decimal fraction, and normalizes the index to a
+    start-of-month Timestamp (consistent with the rest of the pipeline,
+    which uses pd.Timestamp everywhere, never PeriodIndex).
 
-    Join = INNER sui mesi: Ken French a volte pubblica Momentum/ST-Reversal
-    con un mese di ritardo rispetto ai 3 fattori base; un mese assente in uno
-    qualunque dei tre dataset viene escluso interamente, cosi' non si
-    introduce un NaN silenzioso a valle in una regressione fattoriale (§2.4.3).
+    Join = INNER on months: Ken French sometimes publishes Momentum/ST-Reversal
+    a month behind the 3 base factors; a month missing from any one of the
+    three datasets is excluded entirely, so no silent NaN is introduced
+    downstream in a factor regression (§2.4.3).
     """
     merged = None
     for name, cols in _DATASETS.items():
@@ -56,8 +57,8 @@ def assemble_factors(raw: dict[str, pd.DataFrame]) -> pd.DataFrame:
 
 
 def download_and_cache_factors() -> pd.DataFrame:
-    """Scarica i tre dataset dalla Ken French Data Library e salva la cache
-    locale in Parquet. Da eseguire manualmente (python -m data.factors)."""
+    """Downloads the three datasets from the Ken French Data Library and
+    saves the local Parquet cache. Run manually (python -m data.factors)."""
     import pandas_datareader.data as web
 
     # pandas_datareader defaults to roughly the last 5 years when start/end
@@ -74,13 +75,13 @@ def download_and_cache_factors() -> pd.DataFrame:
 
 
 def load_factors(start: str = config.DATA_START, end: str = config.DATA_END) -> pd.DataFrame:
-    """Legge la cache locale e restituisce i fattori nel range [start, end]
-    (per mese di inizio, inclusivo). Solleva FileNotFoundError se la cache
-    non esiste ancora: eseguire prima `python -m data.factors`."""
+    """Reads the local cache and returns the factors in the [start, end]
+    range (by start month, inclusive). Raises FileNotFoundError if the cache
+    does not exist yet: run `python -m data.factors` first."""
     if not CACHE_PATH.exists():
         raise FileNotFoundError(
-            f"cache fattori mancante ({CACHE_PATH}); eseguire prima "
-            "`python -m data.factors` per scaricarla."
+            f"factors cache missing ({CACHE_PATH}); run "
+            "`python -m data.factors` first to download it."
         )
     fac = pd.read_parquet(CACHE_PATH)
     return fac.loc[pd.Timestamp(start) : pd.Timestamp(end)]
@@ -88,6 +89,6 @@ def load_factors(start: str = config.DATA_START, end: str = config.DATA_END) -> 
 
 if __name__ == "__main__":
     f = download_and_cache_factors()
-    print(f"Scaricati e cachati {len(f)} mesi di fattori -> {CACHE_PATH}")
+    print(f"Downloaded and cached {len(f)} months of factors -> {CACHE_PATH}")
     print(f.head())
     print(f.tail())
