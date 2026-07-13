@@ -23,7 +23,7 @@ Discovery quality is H5's PRIMARY comparison metric (PROTOCOL.md §4/H5); net pe
 |---|---|---|---|---|---|
 | GGR-SSD (baseline) | 140 | 12.1% | 140 | 52.1% | 74.6 |
 | Cluster+SSD (Variant A) | 140 | 12.9% | 140 | 33.6% | 13.9 |
-| Cluster+Cointegration (Variant B) | 102 | 16.7% | 102 | 21.6% | 14.0 |
+| Cluster+Cointegration (Variant B) | 102 | 16.7% | 102 | 35.3% | 14.0 |
 | Brute-force+BH (comparator) | 7 | 14.3% | 7 | 0.0% | 6.3 |
 
 ## Discovery quality, per run
@@ -32,31 +32,31 @@ Discovery quality is H5's PRIMARY comparison metric (PROTOCOL.md §4/H5); net pe
 |---|---|---|---|---|---|
 | 2003-11 | GGR-SSD (baseline) | 20 | 0.0% | 55.0% | 291.1 |
 | 2003-11 | Cluster+SSD (Variant A) | 20 | 25.0% | 20.0% | 18.0 |
-| 2003-11 | Cluster+Cointegration (Variant B) | 17 | 17.6% | 11.8% | 11.6 |
+| 2003-11 | Cluster+Cointegration (Variant B) | 17 | 17.6% | 17.6% | 11.6 |
 | 2003-11 | Brute-force+BH (comparator) | 6 | 0.0% | 0.0% | 9.7 |
 | 2004-09 | GGR-SSD (baseline) | 20 | 10.0% | 50.0% | 155.3 |
 | 2004-09 | Cluster+SSD (Variant A) | 20 | 20.0% | 20.0% | 13.0 |
-| 2004-09 | Cluster+Cointegration (Variant B) | 14 | 7.1% | 7.1% | 13.3 |
+| 2004-09 | Cluster+Cointegration (Variant B) | 14 | 7.1% | 28.6% | 13.3 |
 | 2004-09 | Brute-force+BH (comparator) | 0 | n/a | n/a | n/a |
 | 2005-07 | GGR-SSD (baseline) | 20 | 30.0% | 60.0% | 13.5 |
 | 2005-07 | Cluster+SSD (Variant A) | 20 | 0.0% | 20.0% | 13.2 |
-| 2005-07 | Cluster+Cointegration (Variant B) | 20 | 20.0% | 15.0% | 13.9 |
+| 2005-07 | Cluster+Cointegration (Variant B) | 20 | 20.0% | 35.0% | 13.9 |
 | 2005-07 | Brute-force+BH (comparator) | 0 | n/a | n/a | n/a |
 | 2006-06 | GGR-SSD (baseline) | 20 | 10.0% | 30.0% | 13.4 |
 | 2006-06 | Cluster+SSD (Variant A) | 20 | 5.0% | 20.0% | 11.4 |
-| 2006-06 | Cluster+Cointegration (Variant B) | 6 | 0.0% | 33.3% | 14.8 |
+| 2006-06 | Cluster+Cointegration (Variant B) | 6 | 0.0% | 83.3% | 14.8 |
 | 2006-06 | Brute-force+BH (comparator) | 0 | n/a | n/a | n/a |
 | 2007-04 | GGR-SSD (baseline) | 20 | 10.0% | 55.0% | 21.1 |
 | 2007-04 | Cluster+SSD (Variant A) | 20 | 5.0% | 50.0% | 16.0 |
-| 2007-04 | Cluster+Cointegration (Variant B) | 10 | 40.0% | 0.0% | 18.2 |
+| 2007-04 | Cluster+Cointegration (Variant B) | 10 | 40.0% | 20.0% | 18.2 |
 | 2007-04 | Brute-force+BH (comparator) | 1 | 100.0% | 0.0% | 3.0 |
 | 2008-02 | GGR-SSD (baseline) | 20 | 15.0% | 50.0% | 13.2 |
 | 2008-02 | Cluster+SSD (Variant A) | 20 | 25.0% | 55.0% | 9.3 |
-| 2008-02 | Cluster+Cointegration (Variant B) | 18 | 5.6% | 27.8% | 14.4 |
+| 2008-02 | Cluster+Cointegration (Variant B) | 18 | 5.6% | 38.9% | 14.4 |
 | 2008-02 | Brute-force+BH (comparator) | 0 | n/a | n/a | n/a |
 | 2008-12 | GGR-SSD (baseline) | 20 | 10.0% | 65.0% | 14.2 |
 | 2008-12 | Cluster+SSD (Variant A) | 20 | 10.0% | 50.0% | 16.4 |
-| 2008-12 | Cluster+Cointegration (Variant B) | 17 | 23.5% | 52.9% | 11.9 |
+| 2008-12 | Cluster+Cointegration (Variant B) | 17 | 23.5% | 47.1% | 11.9 |
 | 2008-12 | Brute-force+BH (comparator) | 0 | n/a | n/a | n/a |
 
 ## Multiple-testing accounting
@@ -81,7 +81,7 @@ Committed capital, wait-one-day, nominal n_selected=20 for every list (see modul
 |---|---|---|---|---|
 | GGR-SSD (baseline) | 0.1835% | 1.10 | 0.40 | 44 |
 | Cluster+SSD (Variant A) | 0.3083% | 1.98 | 1.11 | 44 |
-| Cluster+Cointegration (Variant B) | -0.0437% | -0.26 | -0.11 | 44 |
+| Cluster+Cointegration (Variant B) | -0.2022% | -0.80 | -0.42 | 44 |
 | Brute-force+BH (comparator) | 0.0000% | n/a | n/a | 44 |
 
 ## Anomalies
@@ -91,3 +91,31 @@ Failed runs: 1.
 
 Runs that raised warnings during processing: 0.
 Total warning count across all runs: 0.
+
+---
+
+## Second execution: sigma-scale fix for Engle-Granger-selected pairs
+
+cluster_coint/brute_force's simulate_pair_wait_one_day trigger sigma switched from formation.spread_sigma (SSD/normalized-price-index scale -- a mismatch for pairs selected on the Engle-Granger log-price residual) to their own selection-time residual_std (engle_granger_pair, same regression already run, no new computation); ggr_ssd/cluster_ssd are unaffected (already consistent). This changes ONLY pct_converged_at_least_once and net performance for cluster_coint/brute_force -- pct_oos_stationary and half_life_oos_days are scale-independent (self-contained in the trading-period Engle-Granger regression, no external sigma involved) and are verified identical before/after in this same run, not just assumed. See DEVIATIONS.md, 2026-07-13 entry, and this module's docstring.
+
+This is a SECOND, explicitly logged execution of this notebook, not a silent overwrite: the pre-fix numbers are preserved below for direct comparison (and in full under the "pre_fix" key of h5_discovery_quality.json).
+
+**Verified, not assumed:** pct_oos_stationary and half_life_oos_days_mean_of_run_means are byte-identical pre-fix vs post-fix for all 4 lists (checked programmatically in this same run, not just argued from the code) -- consistent with _oos_stationarity_and_half_life never touching sigma of any kind (see module docstring).
+
+### % converged at least once, before vs after (the field the fix directly targets)
+
+| list | pre-fix | post-fix | delta |
+|---|---|---|---|
+| GGR-SSD (baseline) | 52.1% | 52.1% | +0.0% |
+| Cluster+SSD (Variant A) | 33.6% | 33.6% | +0.0% |
+| Cluster+Cointegration (Variant B) | 21.6% | 35.3% | +13.7% |
+| Brute-force+BH (comparator) | 0.0% | 0.0% | +0.0% |
+
+### Net performance, before vs after (secondary, same nominal n_selected=20 convention)
+
+| list | mean/month (pre) | mean/month (post) | t (NW, pre) | t (NW, post) | Sharpe (pre) | Sharpe (post) |
+|---|---|---|---|---|---|---|
+| GGR-SSD (baseline) | 0.1835% | 0.1835% | 1.10 | 1.10 | 0.40 | 0.40 |
+| Cluster+SSD (Variant A) | 0.3083% | 0.3083% | 1.98 | 1.98 | 1.11 | 1.11 |
+| Cluster+Cointegration (Variant B) | -0.0437% | -0.2022% | -0.26 | -0.80 | -0.11 | -0.42 |
+| Brute-force+BH (comparator) | 0.0000% | 0.0000% | n/a | n/a | n/a | n/a |

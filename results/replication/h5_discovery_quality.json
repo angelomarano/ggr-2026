@@ -1,871 +1,1749 @@
 {
-  "meta": {
-    "sample_run_ids": [
-      "2003-01",
-      "2003-11",
-      "2004-09",
-      "2005-07",
-      "2006-06",
-      "2007-04",
-      "2008-02",
-      "2008-12"
-    ],
-    "n_runs_ok": 7,
-    "n_runs_sampled": 8,
-    "failed_runs": {
-      "2003-01": "ValueError: no reference trading day before 2002-01-02 00:00:00 to anchor the first return"
-    },
-    "runs_with_warnings": {},
-    "min_oos_days_for_adf": 30,
-    "elapsed_seconds": 837.2148323059082
+  "sigma_fix_note": "cluster_coint/brute_force's simulate_pair_wait_one_day trigger sigma switched from formation.spread_sigma (SSD/normalized-price-index scale -- a mismatch for pairs selected on the Engle-Granger log-price residual) to their own selection-time residual_std (engle_granger_pair, same regression already run, no new computation); ggr_ssd/cluster_ssd are unaffected (already consistent). This changes ONLY pct_converged_at_least_once and net performance for cluster_coint/brute_force -- pct_oos_stationary and half_life_oos_days are scale-independent (self-contained in the trading-period Engle-Granger regression, no external sigma involved) and are verified identical before/after in this same run, not just assumed. See DEVIATIONS.md, 2026-07-13 entry, and this module's docstring.",
+  "scale_independence_check": {
+    "identical": true,
+    "mismatches": []
   },
-  "per_run": {
-    "2003-11": {
-      "n_universe": 258,
-      "clustering": {
-        "method": "optics",
-        "n_clusters": 18,
-        "largest_cluster_size": 8,
-        "largest_cluster_share_of_labeled": 0.1,
-        "n_labeled": 80,
+  "post_fix": {
+    "meta": {
+      "sample_run_ids": [
+        "2003-01",
+        "2003-11",
+        "2004-09",
+        "2005-07",
+        "2006-06",
+        "2007-04",
+        "2008-02",
+        "2008-12"
+      ],
+      "n_runs_ok": 7,
+      "n_runs_sampled": 8,
+      "failed_runs": {
+        "2003-01": "ValueError: no reference trading day before 2002-01-02 00:00:00 to anchor the first return"
+      },
+      "runs_with_warnings": {},
+      "min_oos_days_for_adf": 30,
+      "elapsed_seconds": 841.0380208492279
+    },
+    "per_run": {
+      "2003-11": {
         "n_universe": 258,
-        "noise_excluded": 178,
-        "noise_share": 0.689922480620155
-      },
-      "n_total_possible_pairs": 33153,
-      "n_intra_cluster_pairs": 159,
-      "search_space_reduction_ratio": 0.004795946068229119,
-      "brute_force_meta": {
-        "n_tests": 33153,
-        "expected_false_positives": 1657.65,
-        "n_bh_survivors": 15,
-        "n_by_survivors": 0
-      },
-      "discovery_quality": {
-        "ggr_ssd": {
-          "n_stationarity_evaluable": 20,
-          "n_oos_stationary": 0,
-          "pct_oos_stationary": 0.0,
-          "n_converged": 11,
-          "pct_converged_at_least_once": 0.55,
-          "half_life_oos_days": {
-            "n": 20,
-            "mean": 291.113035411193,
-            "median": 14.63626000632306,
-            "min": 4.644963452206786,
-            "max": 3074.126757559102
+        "clustering": {
+          "method": "optics",
+          "n_clusters": 18,
+          "largest_cluster_size": 8,
+          "largest_cluster_share_of_labeled": 0.1,
+          "n_labeled": 80,
+          "n_universe": 258,
+          "noise_excluded": 178,
+          "noise_share": 0.689922480620155
+        },
+        "n_total_possible_pairs": 33153,
+        "n_intra_cluster_pairs": 159,
+        "search_space_reduction_ratio": 0.004795946068229119,
+        "brute_force_meta": {
+          "n_tests": 33153,
+          "expected_false_positives": 1657.65,
+          "n_bh_survivors": 15,
+          "n_by_survivors": 0
+        },
+        "discovery_quality": {
+          "ggr_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 0,
+            "pct_oos_stationary": 0.0,
+            "n_converged": 11,
+            "pct_converged_at_least_once": 0.55,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 291.113035411193,
+              "median": 14.63626000632306,
+              "min": 4.644963452206786,
+              "max": 3074.126757559102
+            }
+          },
+          "cluster_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 5,
+            "pct_oos_stationary": 0.25,
+            "n_converged": 4,
+            "pct_converged_at_least_once": 0.2,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 17.959154301427624,
+              "median": 11.656254002044886,
+              "min": 2.3538089957395227,
+              "max": 106.69522251634608
+            }
+          },
+          "cluster_coint": {
+            "n_stationarity_evaluable": 17,
+            "n_oos_stationary": 3,
+            "pct_oos_stationary": 0.17647058823529413,
+            "n_converged": 3,
+            "pct_converged_at_least_once": 0.17647058823529413,
+            "half_life_oos_days": {
+              "n": 17,
+              "mean": 11.61077465548314,
+              "median": 9.238902532192789,
+              "min": 2.4055572915123435,
+              "max": 36.474644106316816
+            }
+          },
+          "brute_force": {
+            "n_stationarity_evaluable": 6,
+            "n_oos_stationary": 0,
+            "pct_oos_stationary": 0.0,
+            "n_converged": 0,
+            "pct_converged_at_least_once": 0.0,
+            "half_life_oos_days": {
+              "n": 6,
+              "mean": 9.69870400766508,
+              "median": 9.699122052634502,
+              "min": 6.649446908026317,
+              "max": 12.707877764712695
+            }
           }
         },
-        "cluster_ssd": {
-          "n_stationarity_evaluable": 20,
-          "n_oos_stationary": 5,
-          "pct_oos_stationary": 0.25,
-          "n_converged": 4,
-          "pct_converged_at_least_once": 0.2,
-          "half_life_oos_days": {
-            "n": 20,
-            "mean": 17.959154301427624,
-            "median": 11.656254002044886,
-            "min": 2.3538089957395227,
-            "max": 106.69522251634608
-          }
+        "n_candidates": {
+          "ggr_ssd": 20,
+          "cluster_ssd": 20,
+          "cluster_coint": 17,
+          "brute_force": 6
         },
-        "cluster_coint": {
-          "n_stationarity_evaluable": 17,
-          "n_oos_stationary": 3,
-          "pct_oos_stationary": 0.17647058823529413,
-          "n_converged": 2,
-          "pct_converged_at_least_once": 0.11764705882352941,
-          "half_life_oos_days": {
-            "n": 17,
-            "mean": 11.61077465548314,
-            "median": 9.238902532192789,
-            "min": 2.4055572915123435,
-            "max": 36.474644106316816
-          }
-        },
-        "brute_force": {
-          "n_stationarity_evaluable": 6,
-          "n_oos_stationary": 0,
-          "pct_oos_stationary": 0.0,
-          "n_converged": 0,
-          "pct_converged_at_least_once": 0.0,
-          "half_life_oos_days": {
-            "n": 6,
-            "mean": 9.69870400766508,
-            "median": 9.699122052634502,
-            "min": 6.649446908026317,
-            "max": 12.707877764712695
+        "performance": {
+          "ggr_ssd": {
+            "mean_monthly": 0.0037021140116523074,
+            "t_stat_nw": 0.9343654336913084,
+            "annualized_sharpe": 0.6182769804217634,
+            "n_months": 6
+          },
+          "cluster_ssd": {
+            "mean_monthly": 0.0009004980332482284,
+            "t_stat_nw": 0.32442254498922574,
+            "annualized_sharpe": 0.2856830683492565,
+            "n_months": 6
+          },
+          "cluster_coint": {
+            "mean_monthly": -0.003711661841638441,
+            "t_stat_nw": -1.780502475398995,
+            "annualized_sharpe": -1.2807164113537022,
+            "n_months": 6
+          },
+          "brute_force": {
+            "mean_monthly": 0.0,
+            "t_stat_nw": null,
+            "annualized_sharpe": null,
+            "n_months": 6
           }
         }
       },
-      "n_candidates": {
-        "ggr_ssd": 20,
-        "cluster_ssd": 20,
-        "cluster_coint": 17,
-        "brute_force": 6
-      },
-      "performance": {
-        "ggr_ssd": {
-          "mean_monthly": 0.0037021140116523074,
-          "t_stat_nw": 0.9343654336913084,
-          "annualized_sharpe": 0.6182769804217634,
-          "n_months": 6
-        },
-        "cluster_ssd": {
-          "mean_monthly": 0.0009004980332482284,
-          "t_stat_nw": 0.32442254498922574,
-          "annualized_sharpe": 0.2856830683492565,
-          "n_months": 6
-        },
-        "cluster_coint": {
-          "mean_monthly": -0.0006839000653145655,
-          "t_stat_nw": -0.6762850982653806,
-          "annualized_sharpe": -0.4196652616074812,
-          "n_months": 6
-        },
-        "brute_force": {
-          "mean_monthly": 0.0,
-          "t_stat_nw": null,
-          "annualized_sharpe": null,
-          "n_months": 6
-        }
-      }
-    },
-    "2004-09": {
-      "n_universe": 263,
-      "clustering": {
-        "method": "optics",
-        "n_clusters": 15,
-        "largest_cluster_size": 11,
-        "largest_cluster_share_of_labeled": 0.13253012048192772,
-        "n_labeled": 83,
+      "2004-09": {
         "n_universe": 263,
-        "noise_excluded": 180,
-        "noise_share": 0.6844106463878327
-      },
-      "n_total_possible_pairs": 34453,
-      "n_intra_cluster_pairs": 239,
-      "search_space_reduction_ratio": 0.006936986619452587,
-      "brute_force_meta": {
-        "n_tests": 34453,
-        "expected_false_positives": 1722.65,
-        "n_bh_survivors": 0,
-        "n_by_survivors": 0
-      },
-      "discovery_quality": {
-        "ggr_ssd": {
-          "n_stationarity_evaluable": 20,
-          "n_oos_stationary": 2,
-          "pct_oos_stationary": 0.1,
-          "n_converged": 10,
-          "pct_converged_at_least_once": 0.5,
-          "half_life_oos_days": {
-            "n": 19,
-            "mean": 155.30424825469558,
-            "median": 15.296999172262844,
-            "min": 3.512638155881259,
-            "max": 2213.6247508030815
+        "clustering": {
+          "method": "optics",
+          "n_clusters": 15,
+          "largest_cluster_size": 11,
+          "largest_cluster_share_of_labeled": 0.13253012048192772,
+          "n_labeled": 83,
+          "n_universe": 263,
+          "noise_excluded": 180,
+          "noise_share": 0.6844106463878327
+        },
+        "n_total_possible_pairs": 34453,
+        "n_intra_cluster_pairs": 239,
+        "search_space_reduction_ratio": 0.006936986619452587,
+        "brute_force_meta": {
+          "n_tests": 34453,
+          "expected_false_positives": 1722.65,
+          "n_bh_survivors": 0,
+          "n_by_survivors": 0
+        },
+        "discovery_quality": {
+          "ggr_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 2,
+            "pct_oos_stationary": 0.1,
+            "n_converged": 10,
+            "pct_converged_at_least_once": 0.5,
+            "half_life_oos_days": {
+              "n": 19,
+              "mean": 155.30424825469558,
+              "median": 15.296999172262844,
+              "min": 3.512638155881259,
+              "max": 2213.6247508030815
+            }
+          },
+          "cluster_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 4,
+            "pct_oos_stationary": 0.2,
+            "n_converged": 4,
+            "pct_converged_at_least_once": 0.2,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 13.048232129400446,
+              "median": 9.21144231401242,
+              "min": 3.491694926826897,
+              "max": 48.906296672953104
+            }
+          },
+          "cluster_coint": {
+            "n_stationarity_evaluable": 14,
+            "n_oos_stationary": 1,
+            "pct_oos_stationary": 0.07142857142857142,
+            "n_converged": 4,
+            "pct_converged_at_least_once": 0.2857142857142857,
+            "half_life_oos_days": {
+              "n": 14,
+              "mean": 13.321727830565942,
+              "median": 10.498927246884865,
+              "min": 3.491694926826897,
+              "max": 32.63882765784806
+            }
+          },
+          "brute_force": {
+            "n_stationarity_evaluable": 0,
+            "n_oos_stationary": 0,
+            "pct_oos_stationary": null,
+            "n_converged": 0,
+            "pct_converged_at_least_once": null,
+            "half_life_oos_days": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "min": null,
+              "max": null
+            }
           }
         },
-        "cluster_ssd": {
-          "n_stationarity_evaluable": 20,
-          "n_oos_stationary": 4,
-          "pct_oos_stationary": 0.2,
-          "n_converged": 4,
-          "pct_converged_at_least_once": 0.2,
-          "half_life_oos_days": {
-            "n": 20,
-            "mean": 13.048232129400446,
-            "median": 9.21144231401242,
-            "min": 3.491694926826897,
-            "max": 48.906296672953104
-          }
+        "n_candidates": {
+          "ggr_ssd": 20,
+          "cluster_ssd": 20,
+          "cluster_coint": 14,
+          "brute_force": 0
         },
-        "cluster_coint": {
-          "n_stationarity_evaluable": 14,
-          "n_oos_stationary": 1,
-          "pct_oos_stationary": 0.07142857142857142,
-          "n_converged": 1,
-          "pct_converged_at_least_once": 0.07142857142857142,
-          "half_life_oos_days": {
-            "n": 14,
-            "mean": 13.321727830565942,
-            "median": 10.498927246884865,
-            "min": 3.491694926826897,
-            "max": 32.63882765784806
-          }
-        },
-        "brute_force": {
-          "n_stationarity_evaluable": 0,
-          "n_oos_stationary": 0,
-          "pct_oos_stationary": null,
-          "n_converged": 0,
-          "pct_converged_at_least_once": null,
-          "half_life_oos_days": {
-            "n": 0,
-            "mean": null,
-            "median": null,
-            "min": null,
-            "max": null
+        "performance": {
+          "ggr_ssd": {
+            "mean_monthly": -0.001815910602916891,
+            "t_stat_nw": -1.4458718437828633,
+            "annualized_sharpe": -0.7745957419107731,
+            "n_months": 7
+          },
+          "cluster_ssd": {
+            "mean_monthly": -8.977197741079574e-05,
+            "t_stat_nw": -0.0795053985855423,
+            "annualized_sharpe": -0.03811597196165783,
+            "n_months": 7
+          },
+          "cluster_coint": {
+            "mean_monthly": -0.0033000660630769624,
+            "t_stat_nw": -1.0266452227700067,
+            "annualized_sharpe": -0.82282795137667,
+            "n_months": 7
+          },
+          "brute_force": {
+            "mean_monthly": 0.0,
+            "t_stat_nw": null,
+            "annualized_sharpe": null,
+            "n_months": 7
           }
         }
       },
-      "n_candidates": {
-        "ggr_ssd": 20,
-        "cluster_ssd": 20,
-        "cluster_coint": 14,
-        "brute_force": 0
-      },
-      "performance": {
-        "ggr_ssd": {
-          "mean_monthly": -0.001815910602916891,
-          "t_stat_nw": -1.4458718437828633,
-          "annualized_sharpe": -0.7745957419107731,
-          "n_months": 7
-        },
-        "cluster_ssd": {
-          "mean_monthly": -8.977197741079574e-05,
-          "t_stat_nw": -0.0795053985855423,
-          "annualized_sharpe": -0.03811597196165783,
-          "n_months": 7
-        },
-        "cluster_coint": {
-          "mean_monthly": -0.0029929697112470095,
-          "t_stat_nw": -1.3632674636455575,
-          "annualized_sharpe": -0.9370436757779328,
-          "n_months": 7
-        },
-        "brute_force": {
-          "mean_monthly": 0.0,
-          "t_stat_nw": null,
-          "annualized_sharpe": null,
-          "n_months": 7
-        }
-      }
-    },
-    "2005-07": {
-      "n_universe": 267,
-      "clustering": {
-        "method": "optics",
-        "n_clusters": 17,
-        "largest_cluster_size": 12,
-        "largest_cluster_share_of_labeled": 0.13953488372093023,
-        "n_labeled": 86,
+      "2005-07": {
         "n_universe": 267,
-        "noise_excluded": 181,
-        "noise_share": 0.6779026217228464
-      },
-      "n_total_possible_pairs": 35511,
-      "n_intra_cluster_pairs": 225,
-      "search_space_reduction_ratio": 0.006336064881304384,
-      "brute_force_meta": {
-        "n_tests": 35511,
-        "expected_false_positives": 1775.5500000000002,
-        "n_bh_survivors": 0,
-        "n_by_survivors": 0
-      },
-      "discovery_quality": {
-        "ggr_ssd": {
-          "n_stationarity_evaluable": 20,
-          "n_oos_stationary": 6,
-          "pct_oos_stationary": 0.3,
-          "n_converged": 12,
-          "pct_converged_at_least_once": 0.6,
-          "half_life_oos_days": {
-            "n": 20,
-            "mean": 13.547148341910367,
-            "median": 10.88704281028851,
-            "min": 3.5868056957440975,
-            "max": 48.22482927623937
+        "clustering": {
+          "method": "optics",
+          "n_clusters": 17,
+          "largest_cluster_size": 12,
+          "largest_cluster_share_of_labeled": 0.13953488372093023,
+          "n_labeled": 86,
+          "n_universe": 267,
+          "noise_excluded": 181,
+          "noise_share": 0.6779026217228464
+        },
+        "n_total_possible_pairs": 35511,
+        "n_intra_cluster_pairs": 225,
+        "search_space_reduction_ratio": 0.006336064881304384,
+        "brute_force_meta": {
+          "n_tests": 35511,
+          "expected_false_positives": 1775.5500000000002,
+          "n_bh_survivors": 0,
+          "n_by_survivors": 0
+        },
+        "discovery_quality": {
+          "ggr_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 6,
+            "pct_oos_stationary": 0.3,
+            "n_converged": 12,
+            "pct_converged_at_least_once": 0.6,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 13.547148341910367,
+              "median": 10.88704281028851,
+              "min": 3.5868056957440975,
+              "max": 48.22482927623937
+            }
+          },
+          "cluster_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 0,
+            "pct_oos_stationary": 0.0,
+            "n_converged": 4,
+            "pct_converged_at_least_once": 0.2,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 13.152565201086219,
+              "median": 12.31408850071496,
+              "min": 3.338196252788688,
+              "max": 28.05650880904317
+            }
+          },
+          "cluster_coint": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 4,
+            "pct_oos_stationary": 0.2,
+            "n_converged": 7,
+            "pct_converged_at_least_once": 0.35,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 13.856026845765484,
+              "median": 12.142407765721414,
+              "min": 4.496578549132456,
+              "max": 41.69588239092511
+            }
+          },
+          "brute_force": {
+            "n_stationarity_evaluable": 0,
+            "n_oos_stationary": 0,
+            "pct_oos_stationary": null,
+            "n_converged": 0,
+            "pct_converged_at_least_once": null,
+            "half_life_oos_days": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "min": null,
+              "max": null
+            }
           }
         },
-        "cluster_ssd": {
-          "n_stationarity_evaluable": 20,
-          "n_oos_stationary": 0,
-          "pct_oos_stationary": 0.0,
-          "n_converged": 4,
-          "pct_converged_at_least_once": 0.2,
-          "half_life_oos_days": {
-            "n": 20,
-            "mean": 13.152565201086219,
-            "median": 12.31408850071496,
-            "min": 3.338196252788688,
-            "max": 28.05650880904317
-          }
+        "n_candidates": {
+          "ggr_ssd": 20,
+          "cluster_ssd": 20,
+          "cluster_coint": 20,
+          "brute_force": 0
         },
-        "cluster_coint": {
-          "n_stationarity_evaluable": 20,
-          "n_oos_stationary": 4,
-          "pct_oos_stationary": 0.2,
-          "n_converged": 3,
-          "pct_converged_at_least_once": 0.15,
-          "half_life_oos_days": {
-            "n": 20,
-            "mean": 13.856026845765484,
-            "median": 12.142407765721414,
-            "min": 4.496578549132456,
-            "max": 41.69588239092511
-          }
-        },
-        "brute_force": {
-          "n_stationarity_evaluable": 0,
-          "n_oos_stationary": 0,
-          "pct_oos_stationary": null,
-          "n_converged": 0,
-          "pct_converged_at_least_once": null,
-          "half_life_oos_days": {
-            "n": 0,
-            "mean": null,
-            "median": null,
-            "min": null,
-            "max": null
+        "performance": {
+          "ggr_ssd": {
+            "mean_monthly": 0.0044352501310563905,
+            "t_stat_nw": 1.8819165673867875,
+            "annualized_sharpe": 1.043420194419347,
+            "n_months": 6
+          },
+          "cluster_ssd": {
+            "mean_monthly": -0.0007194016014570219,
+            "t_stat_nw": -0.1581896009367639,
+            "annualized_sharpe": -0.17327731125169124,
+            "n_months": 6
+          },
+          "cluster_coint": {
+            "mean_monthly": 0.0009176091212610249,
+            "t_stat_nw": 0.1516774687922503,
+            "annualized_sharpe": 0.18979409846770787,
+            "n_months": 6
+          },
+          "brute_force": {
+            "mean_monthly": 0.0,
+            "t_stat_nw": null,
+            "annualized_sharpe": null,
+            "n_months": 6
           }
         }
       },
-      "n_candidates": {
-        "ggr_ssd": 20,
-        "cluster_ssd": 20,
-        "cluster_coint": 20,
-        "brute_force": 0
-      },
-      "performance": {
-        "ggr_ssd": {
-          "mean_monthly": 0.0044352501310563905,
-          "t_stat_nw": 1.8819165673867875,
-          "annualized_sharpe": 1.043420194419347,
-          "n_months": 6
-        },
-        "cluster_ssd": {
-          "mean_monthly": -0.0007194016014570219,
-          "t_stat_nw": -0.1581896009367639,
-          "annualized_sharpe": -0.17327731125169124,
-          "n_months": 6
-        },
-        "cluster_coint": {
-          "mean_monthly": 0.0003322238111480584,
-          "t_stat_nw": 0.09973450399388398,
-          "annualized_sharpe": 0.11065182175855942,
-          "n_months": 6
-        },
-        "brute_force": {
-          "mean_monthly": 0.0,
-          "t_stat_nw": null,
-          "annualized_sharpe": null,
-          "n_months": 6
-        }
-      }
-    },
-    "2006-06": {
-      "n_universe": 268,
-      "clustering": {
-        "method": "optics",
-        "n_clusters": 20,
-        "largest_cluster_size": 7,
-        "largest_cluster_share_of_labeled": 0.08860759493670886,
-        "n_labeled": 79,
+      "2006-06": {
         "n_universe": 268,
-        "noise_excluded": 189,
-        "noise_share": 0.7052238805970149
-      },
-      "n_total_possible_pairs": 35778,
-      "n_intra_cluster_pairs": 130,
-      "search_space_reduction_ratio": 0.0036335178042372408,
-      "brute_force_meta": {
-        "n_tests": 35778,
-        "expected_false_positives": 1788.9,
-        "n_bh_survivors": 0,
-        "n_by_survivors": 0
-      },
-      "discovery_quality": {
-        "ggr_ssd": {
-          "n_stationarity_evaluable": 20,
-          "n_oos_stationary": 2,
-          "pct_oos_stationary": 0.1,
-          "n_converged": 6,
-          "pct_converged_at_least_once": 0.3,
-          "half_life_oos_days": {
-            "n": 20,
-            "mean": 13.379426291516662,
-            "median": 8.077368355856896,
-            "min": 4.073409922073961,
-            "max": 47.89213090593972
+        "clustering": {
+          "method": "optics",
+          "n_clusters": 20,
+          "largest_cluster_size": 7,
+          "largest_cluster_share_of_labeled": 0.08860759493670886,
+          "n_labeled": 79,
+          "n_universe": 268,
+          "noise_excluded": 189,
+          "noise_share": 0.7052238805970149
+        },
+        "n_total_possible_pairs": 35778,
+        "n_intra_cluster_pairs": 130,
+        "search_space_reduction_ratio": 0.0036335178042372408,
+        "brute_force_meta": {
+          "n_tests": 35778,
+          "expected_false_positives": 1788.9,
+          "n_bh_survivors": 0,
+          "n_by_survivors": 0
+        },
+        "discovery_quality": {
+          "ggr_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 2,
+            "pct_oos_stationary": 0.1,
+            "n_converged": 6,
+            "pct_converged_at_least_once": 0.3,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 13.379426291516662,
+              "median": 8.077368355856896,
+              "min": 4.073409922073961,
+              "max": 47.89213090593972
+            }
+          },
+          "cluster_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 1,
+            "pct_oos_stationary": 0.05,
+            "n_converged": 4,
+            "pct_converged_at_least_once": 0.2,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 11.36867451402349,
+              "median": 10.023863522903909,
+              "min": 3.9981135465365707,
+              "max": 22.879169229279636
+            }
+          },
+          "cluster_coint": {
+            "n_stationarity_evaluable": 6,
+            "n_oos_stationary": 0,
+            "pct_oos_stationary": 0.0,
+            "n_converged": 5,
+            "pct_converged_at_least_once": 0.8333333333333334,
+            "half_life_oos_days": {
+              "n": 6,
+              "mean": 14.82701714999341,
+              "median": 13.143218317988529,
+              "min": 6.283651177864351,
+              "max": 29.92059002583293
+            }
+          },
+          "brute_force": {
+            "n_stationarity_evaluable": 0,
+            "n_oos_stationary": 0,
+            "pct_oos_stationary": null,
+            "n_converged": 0,
+            "pct_converged_at_least_once": null,
+            "half_life_oos_days": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "min": null,
+              "max": null
+            }
           }
         },
-        "cluster_ssd": {
-          "n_stationarity_evaluable": 20,
-          "n_oos_stationary": 1,
-          "pct_oos_stationary": 0.05,
-          "n_converged": 4,
-          "pct_converged_at_least_once": 0.2,
-          "half_life_oos_days": {
-            "n": 20,
-            "mean": 11.36867451402349,
-            "median": 10.023863522903909,
-            "min": 3.9981135465365707,
-            "max": 22.879169229279636
-          }
+        "n_candidates": {
+          "ggr_ssd": 20,
+          "cluster_ssd": 20,
+          "cluster_coint": 6,
+          "brute_force": 0
         },
-        "cluster_coint": {
-          "n_stationarity_evaluable": 6,
-          "n_oos_stationary": 0,
-          "pct_oos_stationary": 0.0,
-          "n_converged": 2,
-          "pct_converged_at_least_once": 0.3333333333333333,
-          "half_life_oos_days": {
-            "n": 6,
-            "mean": 14.82701714999341,
-            "median": 13.143218317988529,
-            "min": 6.283651177864351,
-            "max": 29.92059002583293
-          }
-        },
-        "brute_force": {
-          "n_stationarity_evaluable": 0,
-          "n_oos_stationary": 0,
-          "pct_oos_stationary": null,
-          "n_converged": 0,
-          "pct_converged_at_least_once": null,
-          "half_life_oos_days": {
-            "n": 0,
-            "mean": null,
-            "median": null,
-            "min": null,
-            "max": null
+        "performance": {
+          "ggr_ssd": {
+            "mean_monthly": -0.0005775879043716607,
+            "t_stat_nw": -0.6788508231215288,
+            "annualized_sharpe": -0.4604849706961371,
+            "n_months": 6
+          },
+          "cluster_ssd": {
+            "mean_monthly": 0.0009913750545083775,
+            "t_stat_nw": 2.261310452189121,
+            "annualized_sharpe": 1.1043435468828495,
+            "n_months": 6
+          },
+          "cluster_coint": {
+            "mean_monthly": 0.006110570097701035,
+            "t_stat_nw": 3.9739963912282303,
+            "annualized_sharpe": 4.815610402722598,
+            "n_months": 6
+          },
+          "brute_force": {
+            "mean_monthly": 0.0,
+            "t_stat_nw": null,
+            "annualized_sharpe": null,
+            "n_months": 6
           }
         }
       },
-      "n_candidates": {
-        "ggr_ssd": 20,
-        "cluster_ssd": 20,
-        "cluster_coint": 6,
-        "brute_force": 0
-      },
-      "performance": {
-        "ggr_ssd": {
-          "mean_monthly": -0.0005775879043716607,
-          "t_stat_nw": -0.6788508231215288,
-          "annualized_sharpe": -0.4604849706961371,
-          "n_months": 6
-        },
-        "cluster_ssd": {
-          "mean_monthly": 0.0009913750545083775,
-          "t_stat_nw": 2.261310452189121,
-          "annualized_sharpe": 1.1043435468828495,
-          "n_months": 6
-        },
-        "cluster_coint": {
-          "mean_monthly": 0.0030545768407200437,
-          "t_stat_nw": 4.806193339672617,
-          "annualized_sharpe": 3.85416303987639,
-          "n_months": 6
-        },
-        "brute_force": {
-          "mean_monthly": 0.0,
-          "t_stat_nw": null,
-          "annualized_sharpe": null,
-          "n_months": 6
-        }
-      }
-    },
-    "2007-04": {
-      "n_universe": 281,
-      "clustering": {
-        "method": "optics",
-        "n_clusters": 21,
-        "largest_cluster_size": 8,
-        "largest_cluster_share_of_labeled": 0.08,
-        "n_labeled": 100,
+      "2007-04": {
         "n_universe": 281,
-        "noise_excluded": 181,
-        "noise_share": 0.6441281138790036
-      },
-      "n_total_possible_pairs": 39340,
-      "n_intra_cluster_pairs": 209,
-      "search_space_reduction_ratio": 0.005312658871377733,
-      "brute_force_meta": {
-        "n_tests": 39340,
-        "expected_false_positives": 1967.0,
-        "n_bh_survivors": 1,
-        "n_by_survivors": 0
-      },
-      "discovery_quality": {
-        "ggr_ssd": {
-          "n_stationarity_evaluable": 20,
-          "n_oos_stationary": 2,
-          "pct_oos_stationary": 0.1,
-          "n_converged": 11,
-          "pct_converged_at_least_once": 0.55,
-          "half_life_oos_days": {
-            "n": 19,
-            "mean": 21.061909421550276,
-            "median": 8.05905178417926,
-            "min": 3.3931252904182836,
-            "max": 175.55008527671362
+        "clustering": {
+          "method": "optics",
+          "n_clusters": 21,
+          "largest_cluster_size": 8,
+          "largest_cluster_share_of_labeled": 0.08,
+          "n_labeled": 100,
+          "n_universe": 281,
+          "noise_excluded": 181,
+          "noise_share": 0.6441281138790036
+        },
+        "n_total_possible_pairs": 39340,
+        "n_intra_cluster_pairs": 209,
+        "search_space_reduction_ratio": 0.005312658871377733,
+        "brute_force_meta": {
+          "n_tests": 39340,
+          "expected_false_positives": 1967.0,
+          "n_bh_survivors": 1,
+          "n_by_survivors": 0
+        },
+        "discovery_quality": {
+          "ggr_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 2,
+            "pct_oos_stationary": 0.1,
+            "n_converged": 11,
+            "pct_converged_at_least_once": 0.55,
+            "half_life_oos_days": {
+              "n": 19,
+              "mean": 21.061909421550276,
+              "median": 8.05905178417926,
+              "min": 3.3931252904182836,
+              "max": 175.55008527671362
+            }
+          },
+          "cluster_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 1,
+            "pct_oos_stationary": 0.05,
+            "n_converged": 10,
+            "pct_converged_at_least_once": 0.5,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 15.960148204455766,
+              "median": 8.657615619421463,
+              "min": 4.244226294706674,
+              "max": 71.04549047867664
+            }
+          },
+          "cluster_coint": {
+            "n_stationarity_evaluable": 10,
+            "n_oos_stationary": 4,
+            "pct_oos_stationary": 0.4,
+            "n_converged": 2,
+            "pct_converged_at_least_once": 0.2,
+            "half_life_oos_days": {
+              "n": 10,
+              "mean": 18.232362975458855,
+              "median": 6.9140003068259865,
+              "min": 2.267187030273121,
+              "max": 64.86936589671983
+            }
+          },
+          "brute_force": {
+            "n_stationarity_evaluable": 1,
+            "n_oos_stationary": 1,
+            "pct_oos_stationary": 1.0,
+            "n_converged": 0,
+            "pct_converged_at_least_once": 0.0,
+            "half_life_oos_days": {
+              "n": 1,
+              "mean": 2.958332773287992,
+              "median": 2.958332773287992,
+              "min": 2.958332773287992,
+              "max": 2.958332773287992
+            }
           }
         },
-        "cluster_ssd": {
-          "n_stationarity_evaluable": 20,
-          "n_oos_stationary": 1,
-          "pct_oos_stationary": 0.05,
-          "n_converged": 10,
-          "pct_converged_at_least_once": 0.5,
-          "half_life_oos_days": {
-            "n": 20,
-            "mean": 15.960148204455766,
-            "median": 8.657615619421463,
-            "min": 4.244226294706674,
-            "max": 71.04549047867664
-          }
+        "n_candidates": {
+          "ggr_ssd": 20,
+          "cluster_ssd": 20,
+          "cluster_coint": 10,
+          "brute_force": 1
         },
-        "cluster_coint": {
-          "n_stationarity_evaluable": 10,
-          "n_oos_stationary": 4,
-          "pct_oos_stationary": 0.4,
-          "n_converged": 0,
-          "pct_converged_at_least_once": 0.0,
-          "half_life_oos_days": {
-            "n": 10,
-            "mean": 18.232362975458855,
-            "median": 6.9140003068259865,
-            "min": 2.267187030273121,
-            "max": 64.86936589671983
-          }
-        },
-        "brute_force": {
-          "n_stationarity_evaluable": 1,
-          "n_oos_stationary": 1,
-          "pct_oos_stationary": 1.0,
-          "n_converged": 0,
-          "pct_converged_at_least_once": 0.0,
-          "half_life_oos_days": {
-            "n": 1,
-            "mean": 2.958332773287992,
-            "median": 2.958332773287992,
-            "min": 2.958332773287992,
-            "max": 2.958332773287992
+        "performance": {
+          "ggr_ssd": {
+            "mean_monthly": -0.0017831470742180255,
+            "t_stat_nw": -0.4597564906292105,
+            "annualized_sharpe": -0.32875999573603687,
+            "n_months": 6
+          },
+          "cluster_ssd": {
+            "mean_monthly": 0.00391169069393288,
+            "t_stat_nw": 3.9570461112621347,
+            "annualized_sharpe": 1.8427246071276084,
+            "n_months": 6
+          },
+          "cluster_coint": {
+            "mean_monthly": -0.002507501272745646,
+            "t_stat_nw": -1.6882683318623177,
+            "annualized_sharpe": -1.240760112565037,
+            "n_months": 6
+          },
+          "brute_force": {
+            "mean_monthly": 0.0,
+            "t_stat_nw": null,
+            "annualized_sharpe": null,
+            "n_months": 6
           }
         }
       },
-      "n_candidates": {
-        "ggr_ssd": 20,
-        "cluster_ssd": 20,
-        "cluster_coint": 10,
-        "brute_force": 1
-      },
-      "performance": {
-        "ggr_ssd": {
-          "mean_monthly": -0.0017831470742180255,
-          "t_stat_nw": -0.4597564906292105,
-          "annualized_sharpe": -0.32875999573603687,
-          "n_months": 6
-        },
-        "cluster_ssd": {
-          "mean_monthly": 0.00391169069393288,
-          "t_stat_nw": 3.9570461112621347,
-          "annualized_sharpe": 1.8427246071276084,
-          "n_months": 6
-        },
-        "cluster_coint": {
-          "mean_monthly": -0.0016429362572710033,
-          "t_stat_nw": -2.059840027217013,
-          "annualized_sharpe": -1.3501821753142877,
-          "n_months": 6
-        },
-        "brute_force": {
-          "mean_monthly": 0.0,
-          "t_stat_nw": null,
-          "annualized_sharpe": null,
-          "n_months": 6
-        }
-      }
-    },
-    "2008-02": {
-      "n_universe": 289,
-      "clustering": {
-        "method": "optics",
-        "n_clusters": 14,
-        "largest_cluster_size": 13,
-        "largest_cluster_share_of_labeled": 0.18309859154929578,
-        "n_labeled": 71,
+      "2008-02": {
         "n_universe": 289,
-        "noise_excluded": 218,
-        "noise_share": 0.754325259515571
-      },
-      "n_total_possible_pairs": 41616,
-      "n_intra_cluster_pairs": 207,
-      "search_space_reduction_ratio": 0.004974048442906574,
-      "brute_force_meta": {
-        "n_tests": 41616,
-        "expected_false_positives": 2080.8,
-        "n_bh_survivors": 0,
-        "n_by_survivors": 0
-      },
-      "discovery_quality": {
-        "ggr_ssd": {
-          "n_stationarity_evaluable": 20,
-          "n_oos_stationary": 3,
-          "pct_oos_stationary": 0.15,
-          "n_converged": 10,
-          "pct_converged_at_least_once": 0.5,
-          "half_life_oos_days": {
-            "n": 20,
-            "mean": 13.238003019062722,
-            "median": 10.232962335487354,
-            "min": 3.261195787011293,
-            "max": 38.96350496285061
+        "clustering": {
+          "method": "optics",
+          "n_clusters": 14,
+          "largest_cluster_size": 13,
+          "largest_cluster_share_of_labeled": 0.18309859154929578,
+          "n_labeled": 71,
+          "n_universe": 289,
+          "noise_excluded": 218,
+          "noise_share": 0.754325259515571
+        },
+        "n_total_possible_pairs": 41616,
+        "n_intra_cluster_pairs": 207,
+        "search_space_reduction_ratio": 0.004974048442906574,
+        "brute_force_meta": {
+          "n_tests": 41616,
+          "expected_false_positives": 2080.8,
+          "n_bh_survivors": 0,
+          "n_by_survivors": 0
+        },
+        "discovery_quality": {
+          "ggr_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 3,
+            "pct_oos_stationary": 0.15,
+            "n_converged": 10,
+            "pct_converged_at_least_once": 0.5,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 13.238003019062722,
+              "median": 10.232962335487354,
+              "min": 3.261195787011293,
+              "max": 38.96350496285061
+            }
+          },
+          "cluster_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 5,
+            "pct_oos_stationary": 0.25,
+            "n_converged": 11,
+            "pct_converged_at_least_once": 0.55,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 9.27289930413075,
+              "median": 5.509775440758192,
+              "min": 2.05788010068853,
+              "max": 29.844919359184317
+            }
+          },
+          "cluster_coint": {
+            "n_stationarity_evaluable": 18,
+            "n_oos_stationary": 1,
+            "pct_oos_stationary": 0.05555555555555555,
+            "n_converged": 7,
+            "pct_converged_at_least_once": 0.3888888888888889,
+            "half_life_oos_days": {
+              "n": 18,
+              "mean": 14.364671077202964,
+              "median": 11.85198209690439,
+              "min": 2.9269926051759216,
+              "max": 56.005315880213765
+            }
+          },
+          "brute_force": {
+            "n_stationarity_evaluable": 0,
+            "n_oos_stationary": 0,
+            "pct_oos_stationary": null,
+            "n_converged": 0,
+            "pct_converged_at_least_once": null,
+            "half_life_oos_days": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "min": null,
+              "max": null
+            }
           }
         },
-        "cluster_ssd": {
-          "n_stationarity_evaluable": 20,
-          "n_oos_stationary": 5,
-          "pct_oos_stationary": 0.25,
-          "n_converged": 11,
-          "pct_converged_at_least_once": 0.55,
-          "half_life_oos_days": {
-            "n": 20,
-            "mean": 9.27289930413075,
-            "median": 5.509775440758192,
-            "min": 2.05788010068853,
-            "max": 29.844919359184317
-          }
+        "n_candidates": {
+          "ggr_ssd": 20,
+          "cluster_ssd": 20,
+          "cluster_coint": 18,
+          "brute_force": 0
         },
-        "cluster_coint": {
-          "n_stationarity_evaluable": 18,
-          "n_oos_stationary": 1,
-          "pct_oos_stationary": 0.05555555555555555,
-          "n_converged": 5,
-          "pct_converged_at_least_once": 0.2777777777777778,
-          "half_life_oos_days": {
-            "n": 18,
-            "mean": 14.364671077202964,
-            "median": 11.85198209690439,
-            "min": 2.9269926051759216,
-            "max": 56.005315880213765
-          }
-        },
-        "brute_force": {
-          "n_stationarity_evaluable": 0,
-          "n_oos_stationary": 0,
-          "pct_oos_stationary": null,
-          "n_converged": 0,
-          "pct_converged_at_least_once": null,
-          "half_life_oos_days": {
-            "n": 0,
-            "mean": null,
-            "median": null,
-            "min": null,
-            "max": null
+        "performance": {
+          "ggr_ssd": {
+            "mean_monthly": -0.0006851680506151743,
+            "t_stat_nw": -0.19581797662730857,
+            "annualized_sharpe": -0.13661784533307553,
+            "n_months": 6
+          },
+          "cluster_ssd": {
+            "mean_monthly": 0.007246480043079487,
+            "t_stat_nw": 3.7192734079203253,
+            "annualized_sharpe": 2.5789349969883757,
+            "n_months": 6
+          },
+          "cluster_coint": {
+            "mean_monthly": -0.01328228650213215,
+            "t_stat_nw": -2.382195542098498,
+            "annualized_sharpe": -1.7260134406364396,
+            "n_months": 6
+          },
+          "brute_force": {
+            "mean_monthly": 0.0,
+            "t_stat_nw": null,
+            "annualized_sharpe": null,
+            "n_months": 6
           }
         }
       },
-      "n_candidates": {
-        "ggr_ssd": 20,
-        "cluster_ssd": 20,
-        "cluster_coint": 18,
-        "brute_force": 0
-      },
-      "performance": {
-        "ggr_ssd": {
-          "mean_monthly": -0.0006851680506151743,
-          "t_stat_nw": -0.19581797662730857,
-          "annualized_sharpe": -0.13661784533307553,
-          "n_months": 6
+      "2008-12": {
+        "n_universe": 307,
+        "clustering": {
+          "method": "optics",
+          "n_clusters": 20,
+          "largest_cluster_size": 9,
+          "largest_cluster_share_of_labeled": 0.09090909090909091,
+          "n_labeled": 99,
+          "n_universe": 307,
+          "noise_excluded": 208,
+          "noise_share": 0.6775244299674267
         },
-        "cluster_ssd": {
-          "mean_monthly": 0.007246480043079487,
-          "t_stat_nw": 3.7192734079203253,
-          "annualized_sharpe": 2.5789349969883757,
-          "n_months": 6
+        "n_total_possible_pairs": 46971,
+        "n_intra_cluster_pairs": 227,
+        "search_space_reduction_ratio": 0.004832769155436333,
+        "brute_force_meta": {
+          "n_tests": 46971,
+          "expected_false_positives": 2348.55,
+          "n_bh_survivors": 3,
+          "n_by_survivors": 1
         },
-        "cluster_coint": {
-          "mean_monthly": -0.00931514671455919,
-          "t_stat_nw": -1.3265763990190378,
-          "annualized_sharpe": -1.2416582426437892,
-          "n_months": 6
+        "discovery_quality": {
+          "ggr_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 2,
+            "pct_oos_stationary": 0.1,
+            "n_converged": 13,
+            "pct_converged_at_least_once": 0.65,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 14.246359319438872,
+              "median": 11.44887154199883,
+              "min": 6.143457698176681,
+              "max": 31.709662564001132
+            }
+          },
+          "cluster_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 2,
+            "pct_oos_stationary": 0.1,
+            "n_converged": 10,
+            "pct_converged_at_least_once": 0.5,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 16.409167112277203,
+              "median": 12.91183827182623,
+              "min": 3.8852338667214004,
+              "max": 59.02023527706105
+            }
+          },
+          "cluster_coint": {
+            "n_stationarity_evaluable": 17,
+            "n_oos_stationary": 4,
+            "pct_oos_stationary": 0.23529411764705882,
+            "n_converged": 8,
+            "pct_converged_at_least_once": 0.47058823529411764,
+            "half_life_oos_days": {
+              "n": 17,
+              "mean": 11.852253572324756,
+              "median": 8.67661511834105,
+              "min": 4.588030961839349,
+              "max": 33.95888628325137
+            }
+          },
+          "brute_force": {
+            "n_stationarity_evaluable": 0,
+            "n_oos_stationary": 0,
+            "pct_oos_stationary": null,
+            "n_converged": 0,
+            "pct_converged_at_least_once": null,
+            "half_life_oos_days": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "min": null,
+              "max": null
+            }
+          }
         },
-        "brute_force": {
-          "mean_monthly": 0.0,
-          "t_stat_nw": null,
-          "annualized_sharpe": null,
-          "n_months": 6
+        "n_candidates": {
+          "ggr_ssd": 20,
+          "cluster_ssd": 20,
+          "cluster_coint": 17,
+          "brute_force": 0
+        },
+        "performance": {
+          "ggr_ssd": {
+            "mean_monthly": 0.008986476531728002,
+            "t_stat_nw": 2.0008776261087373,
+            "annualized_sharpe": 1.3409753135315559,
+            "n_months": 7
+          },
+          "cluster_ssd": {
+            "mean_monthly": 0.008899458501675521,
+            "t_stat_nw": 5.440772578583709,
+            "annualized_sharpe": 3.1636794459985444,
+            "n_months": 7
+          },
+          "cluster_coint": {
+            "mean_monthly": 0.0012808332296842604,
+            "t_stat_nw": 0.24486305857720067,
+            "annualized_sharpe": 0.174576918325052,
+            "n_months": 7
+          },
+          "brute_force": {
+            "mean_monthly": 0.0,
+            "t_stat_nw": null,
+            "annualized_sharpe": null,
+            "n_months": 7
+          }
         }
       }
     },
-    "2008-12": {
-      "n_universe": 307,
-      "clustering": {
-        "method": "optics",
-        "n_clusters": 20,
-        "largest_cluster_size": 9,
-        "largest_cluster_share_of_labeled": 0.09090909090909091,
-        "n_labeled": 99,
-        "n_universe": 307,
-        "noise_excluded": 208,
-        "noise_share": 0.6775244299674267
-      },
-      "n_total_possible_pairs": 46971,
-      "n_intra_cluster_pairs": 227,
-      "search_space_reduction_ratio": 0.004832769155436333,
-      "brute_force_meta": {
-        "n_tests": 46971,
-        "expected_false_positives": 2348.55,
-        "n_bh_survivors": 3,
-        "n_by_survivors": 1
-      },
+    "aggregated": {
       "discovery_quality": {
         "ggr_ssd": {
-          "n_stationarity_evaluable": 20,
-          "n_oos_stationary": 2,
-          "pct_oos_stationary": 0.1,
-          "n_converged": 13,
-          "pct_converged_at_least_once": 0.65,
-          "half_life_oos_days": {
-            "n": 20,
-            "mean": 14.246359319438872,
-            "median": 11.44887154199883,
-            "min": 6.143457698176681,
-            "max": 31.709662564001132
-          }
+          "n_stationarity_evaluable": 140,
+          "pct_oos_stationary": 0.12142857142857143,
+          "n_simulated": 140,
+          "pct_converged_at_least_once": 0.5214285714285715,
+          "half_life_oos_days_mean_of_run_means": 74.55573286562392
         },
         "cluster_ssd": {
-          "n_stationarity_evaluable": 20,
-          "n_oos_stationary": 2,
-          "pct_oos_stationary": 0.1,
-          "n_converged": 10,
-          "pct_converged_at_least_once": 0.5,
-          "half_life_oos_days": {
-            "n": 20,
-            "mean": 16.409167112277203,
-            "median": 12.91183827182623,
-            "min": 3.8852338667214004,
-            "max": 59.02023527706105
-          }
+          "n_stationarity_evaluable": 140,
+          "pct_oos_stationary": 0.12857142857142856,
+          "n_simulated": 140,
+          "pct_converged_at_least_once": 0.3357142857142857,
+          "half_life_oos_days_mean_of_run_means": 13.881548680971642
         },
         "cluster_coint": {
-          "n_stationarity_evaluable": 17,
-          "n_oos_stationary": 4,
-          "pct_oos_stationary": 0.23529411764705882,
-          "n_converged": 9,
-          "pct_converged_at_least_once": 0.5294117647058824,
-          "half_life_oos_days": {
-            "n": 17,
-            "mean": 11.852253572324756,
-            "median": 8.67661511834105,
-            "min": 4.588030961839349,
-            "max": 33.95888628325137
-          }
+          "n_stationarity_evaluable": 102,
+          "pct_oos_stationary": 0.16666666666666666,
+          "n_simulated": 102,
+          "pct_converged_at_least_once": 0.35294117647058826,
+          "half_life_oos_days_mean_of_run_means": 14.009262015256365
         },
         "brute_force": {
-          "n_stationarity_evaluable": 0,
-          "n_oos_stationary": 0,
-          "pct_oos_stationary": null,
-          "n_converged": 0,
-          "pct_converged_at_least_once": null,
-          "half_life_oos_days": {
-            "n": 0,
-            "mean": null,
-            "median": null,
-            "min": null,
-            "max": null
-          }
+          "n_stationarity_evaluable": 7,
+          "pct_oos_stationary": 0.14285714285714285,
+          "n_simulated": 7,
+          "pct_converged_at_least_once": 0.0,
+          "half_life_oos_days_mean_of_run_means": 6.328518390476536
         }
-      },
-      "n_candidates": {
-        "ggr_ssd": 20,
-        "cluster_ssd": 20,
-        "cluster_coint": 17,
-        "brute_force": 0
       },
       "performance": {
         "ggr_ssd": {
-          "mean_monthly": 0.008986476531728002,
-          "t_stat_nw": 2.0008776261087373,
-          "annualized_sharpe": 1.3409753135315559,
-          "n_months": 7
+          "mean_monthly": 0.0018350620041522906,
+          "t_stat_nw": 1.1006702248626816,
+          "annualized_sharpe": 0.39931172313516844,
+          "n_months": 44
         },
         "cluster_ssd": {
-          "mean_monthly": 0.008899458501675521,
-          "t_stat_nw": 5.440772578583709,
-          "annualized_sharpe": 3.1636794459985444,
-          "n_months": 7
+          "mean_monthly": 0.003082992250221017,
+          "t_stat_nw": 1.9779675167435937,
+          "annualized_sharpe": 1.1144435882708432,
+          "n_months": 44
         },
         "cluster_coint": {
-          "mean_monthly": 0.007323449863757801,
-          "t_stat_nw": 2.6581760515796478,
-          "annualized_sharpe": 1.2928827244143792,
-          "n_months": 7
+          "mean_monthly": -0.0020221420958880442,
+          "t_stat_nw": -0.8043247301686415,
+          "annualized_sharpe": -0.4167106213609346,
+          "n_months": 44
         },
         "brute_force": {
           "mean_monthly": 0.0,
           "t_stat_nw": null,
           "annualized_sharpe": null,
-          "n_months": 7
+          "n_months": 44
         }
+      },
+      "search_space_reduction": {
+        "total_possible_pairs": 266822,
+        "total_intra_cluster_pairs": 1396,
+        "ratio": 0.005231952387734145
       }
     }
   },
-  "aggregated": {
-    "discovery_quality": {
-      "ggr_ssd": {
-        "n_stationarity_evaluable": 140,
-        "pct_oos_stationary": 0.12142857142857143,
-        "n_simulated": 140,
-        "pct_converged_at_least_once": 0.5214285714285715,
-        "half_life_oos_days_mean_of_run_means": 74.55573286562392
+  "pre_fix": {
+    "meta": {
+      "sample_run_ids": [
+        "2003-01",
+        "2003-11",
+        "2004-09",
+        "2005-07",
+        "2006-06",
+        "2007-04",
+        "2008-02",
+        "2008-12"
+      ],
+      "n_runs_ok": 7,
+      "n_runs_sampled": 8,
+      "failed_runs": {
+        "2003-01": "ValueError: no reference trading day before 2002-01-02 00:00:00 to anchor the first return"
       },
-      "cluster_ssd": {
-        "n_stationarity_evaluable": 140,
-        "pct_oos_stationary": 0.12857142857142856,
-        "n_simulated": 140,
-        "pct_converged_at_least_once": 0.3357142857142857,
-        "half_life_oos_days_mean_of_run_means": 13.881548680971642
+      "runs_with_warnings": {},
+      "min_oos_days_for_adf": 30,
+      "elapsed_seconds": 837.2148323059082
+    },
+    "per_run": {
+      "2003-11": {
+        "n_universe": 258,
+        "clustering": {
+          "method": "optics",
+          "n_clusters": 18,
+          "largest_cluster_size": 8,
+          "largest_cluster_share_of_labeled": 0.1,
+          "n_labeled": 80,
+          "n_universe": 258,
+          "noise_excluded": 178,
+          "noise_share": 0.689922480620155
+        },
+        "n_total_possible_pairs": 33153,
+        "n_intra_cluster_pairs": 159,
+        "search_space_reduction_ratio": 0.004795946068229119,
+        "brute_force_meta": {
+          "n_tests": 33153,
+          "expected_false_positives": 1657.65,
+          "n_bh_survivors": 15,
+          "n_by_survivors": 0
+        },
+        "discovery_quality": {
+          "ggr_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 0,
+            "pct_oos_stationary": 0.0,
+            "n_converged": 11,
+            "pct_converged_at_least_once": 0.55,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 291.113035411193,
+              "median": 14.63626000632306,
+              "min": 4.644963452206786,
+              "max": 3074.126757559102
+            }
+          },
+          "cluster_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 5,
+            "pct_oos_stationary": 0.25,
+            "n_converged": 4,
+            "pct_converged_at_least_once": 0.2,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 17.959154301427624,
+              "median": 11.656254002044886,
+              "min": 2.3538089957395227,
+              "max": 106.69522251634608
+            }
+          },
+          "cluster_coint": {
+            "n_stationarity_evaluable": 17,
+            "n_oos_stationary": 3,
+            "pct_oos_stationary": 0.17647058823529413,
+            "n_converged": 2,
+            "pct_converged_at_least_once": 0.11764705882352941,
+            "half_life_oos_days": {
+              "n": 17,
+              "mean": 11.61077465548314,
+              "median": 9.238902532192789,
+              "min": 2.4055572915123435,
+              "max": 36.474644106316816
+            }
+          },
+          "brute_force": {
+            "n_stationarity_evaluable": 6,
+            "n_oos_stationary": 0,
+            "pct_oos_stationary": 0.0,
+            "n_converged": 0,
+            "pct_converged_at_least_once": 0.0,
+            "half_life_oos_days": {
+              "n": 6,
+              "mean": 9.69870400766508,
+              "median": 9.699122052634502,
+              "min": 6.649446908026317,
+              "max": 12.707877764712695
+            }
+          }
+        },
+        "n_candidates": {
+          "ggr_ssd": 20,
+          "cluster_ssd": 20,
+          "cluster_coint": 17,
+          "brute_force": 6
+        },
+        "performance": {
+          "ggr_ssd": {
+            "mean_monthly": 0.0037021140116523074,
+            "t_stat_nw": 0.9343654336913084,
+            "annualized_sharpe": 0.6182769804217634,
+            "n_months": 6
+          },
+          "cluster_ssd": {
+            "mean_monthly": 0.0009004980332482284,
+            "t_stat_nw": 0.32442254498922574,
+            "annualized_sharpe": 0.2856830683492565,
+            "n_months": 6
+          },
+          "cluster_coint": {
+            "mean_monthly": -0.0006839000653145655,
+            "t_stat_nw": -0.6762850982653806,
+            "annualized_sharpe": -0.4196652616074812,
+            "n_months": 6
+          },
+          "brute_force": {
+            "mean_monthly": 0.0,
+            "t_stat_nw": null,
+            "annualized_sharpe": null,
+            "n_months": 6
+          }
+        }
       },
-      "cluster_coint": {
-        "n_stationarity_evaluable": 102,
-        "pct_oos_stationary": 0.16666666666666666,
-        "n_simulated": 102,
-        "pct_converged_at_least_once": 0.21568627450980393,
-        "half_life_oos_days_mean_of_run_means": 14.009262015256365
+      "2004-09": {
+        "n_universe": 263,
+        "clustering": {
+          "method": "optics",
+          "n_clusters": 15,
+          "largest_cluster_size": 11,
+          "largest_cluster_share_of_labeled": 0.13253012048192772,
+          "n_labeled": 83,
+          "n_universe": 263,
+          "noise_excluded": 180,
+          "noise_share": 0.6844106463878327
+        },
+        "n_total_possible_pairs": 34453,
+        "n_intra_cluster_pairs": 239,
+        "search_space_reduction_ratio": 0.006936986619452587,
+        "brute_force_meta": {
+          "n_tests": 34453,
+          "expected_false_positives": 1722.65,
+          "n_bh_survivors": 0,
+          "n_by_survivors": 0
+        },
+        "discovery_quality": {
+          "ggr_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 2,
+            "pct_oos_stationary": 0.1,
+            "n_converged": 10,
+            "pct_converged_at_least_once": 0.5,
+            "half_life_oos_days": {
+              "n": 19,
+              "mean": 155.30424825469558,
+              "median": 15.296999172262844,
+              "min": 3.512638155881259,
+              "max": 2213.6247508030815
+            }
+          },
+          "cluster_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 4,
+            "pct_oos_stationary": 0.2,
+            "n_converged": 4,
+            "pct_converged_at_least_once": 0.2,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 13.048232129400446,
+              "median": 9.21144231401242,
+              "min": 3.491694926826897,
+              "max": 48.906296672953104
+            }
+          },
+          "cluster_coint": {
+            "n_stationarity_evaluable": 14,
+            "n_oos_stationary": 1,
+            "pct_oos_stationary": 0.07142857142857142,
+            "n_converged": 1,
+            "pct_converged_at_least_once": 0.07142857142857142,
+            "half_life_oos_days": {
+              "n": 14,
+              "mean": 13.321727830565942,
+              "median": 10.498927246884865,
+              "min": 3.491694926826897,
+              "max": 32.63882765784806
+            }
+          },
+          "brute_force": {
+            "n_stationarity_evaluable": 0,
+            "n_oos_stationary": 0,
+            "pct_oos_stationary": null,
+            "n_converged": 0,
+            "pct_converged_at_least_once": null,
+            "half_life_oos_days": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "min": null,
+              "max": null
+            }
+          }
+        },
+        "n_candidates": {
+          "ggr_ssd": 20,
+          "cluster_ssd": 20,
+          "cluster_coint": 14,
+          "brute_force": 0
+        },
+        "performance": {
+          "ggr_ssd": {
+            "mean_monthly": -0.001815910602916891,
+            "t_stat_nw": -1.4458718437828633,
+            "annualized_sharpe": -0.7745957419107731,
+            "n_months": 7
+          },
+          "cluster_ssd": {
+            "mean_monthly": -8.977197741079574e-05,
+            "t_stat_nw": -0.0795053985855423,
+            "annualized_sharpe": -0.03811597196165783,
+            "n_months": 7
+          },
+          "cluster_coint": {
+            "mean_monthly": -0.0029929697112470095,
+            "t_stat_nw": -1.3632674636455575,
+            "annualized_sharpe": -0.9370436757779328,
+            "n_months": 7
+          },
+          "brute_force": {
+            "mean_monthly": 0.0,
+            "t_stat_nw": null,
+            "annualized_sharpe": null,
+            "n_months": 7
+          }
+        }
       },
-      "brute_force": {
-        "n_stationarity_evaluable": 7,
-        "pct_oos_stationary": 0.14285714285714285,
-        "n_simulated": 7,
-        "pct_converged_at_least_once": 0.0,
-        "half_life_oos_days_mean_of_run_means": 6.328518390476536
+      "2005-07": {
+        "n_universe": 267,
+        "clustering": {
+          "method": "optics",
+          "n_clusters": 17,
+          "largest_cluster_size": 12,
+          "largest_cluster_share_of_labeled": 0.13953488372093023,
+          "n_labeled": 86,
+          "n_universe": 267,
+          "noise_excluded": 181,
+          "noise_share": 0.6779026217228464
+        },
+        "n_total_possible_pairs": 35511,
+        "n_intra_cluster_pairs": 225,
+        "search_space_reduction_ratio": 0.006336064881304384,
+        "brute_force_meta": {
+          "n_tests": 35511,
+          "expected_false_positives": 1775.5500000000002,
+          "n_bh_survivors": 0,
+          "n_by_survivors": 0
+        },
+        "discovery_quality": {
+          "ggr_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 6,
+            "pct_oos_stationary": 0.3,
+            "n_converged": 12,
+            "pct_converged_at_least_once": 0.6,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 13.547148341910367,
+              "median": 10.88704281028851,
+              "min": 3.5868056957440975,
+              "max": 48.22482927623937
+            }
+          },
+          "cluster_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 0,
+            "pct_oos_stationary": 0.0,
+            "n_converged": 4,
+            "pct_converged_at_least_once": 0.2,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 13.152565201086219,
+              "median": 12.31408850071496,
+              "min": 3.338196252788688,
+              "max": 28.05650880904317
+            }
+          },
+          "cluster_coint": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 4,
+            "pct_oos_stationary": 0.2,
+            "n_converged": 3,
+            "pct_converged_at_least_once": 0.15,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 13.856026845765484,
+              "median": 12.142407765721414,
+              "min": 4.496578549132456,
+              "max": 41.69588239092511
+            }
+          },
+          "brute_force": {
+            "n_stationarity_evaluable": 0,
+            "n_oos_stationary": 0,
+            "pct_oos_stationary": null,
+            "n_converged": 0,
+            "pct_converged_at_least_once": null,
+            "half_life_oos_days": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "min": null,
+              "max": null
+            }
+          }
+        },
+        "n_candidates": {
+          "ggr_ssd": 20,
+          "cluster_ssd": 20,
+          "cluster_coint": 20,
+          "brute_force": 0
+        },
+        "performance": {
+          "ggr_ssd": {
+            "mean_monthly": 0.0044352501310563905,
+            "t_stat_nw": 1.8819165673867875,
+            "annualized_sharpe": 1.043420194419347,
+            "n_months": 6
+          },
+          "cluster_ssd": {
+            "mean_monthly": -0.0007194016014570219,
+            "t_stat_nw": -0.1581896009367639,
+            "annualized_sharpe": -0.17327731125169124,
+            "n_months": 6
+          },
+          "cluster_coint": {
+            "mean_monthly": 0.0003322238111480584,
+            "t_stat_nw": 0.09973450399388398,
+            "annualized_sharpe": 0.11065182175855942,
+            "n_months": 6
+          },
+          "brute_force": {
+            "mean_monthly": 0.0,
+            "t_stat_nw": null,
+            "annualized_sharpe": null,
+            "n_months": 6
+          }
+        }
+      },
+      "2006-06": {
+        "n_universe": 268,
+        "clustering": {
+          "method": "optics",
+          "n_clusters": 20,
+          "largest_cluster_size": 7,
+          "largest_cluster_share_of_labeled": 0.08860759493670886,
+          "n_labeled": 79,
+          "n_universe": 268,
+          "noise_excluded": 189,
+          "noise_share": 0.7052238805970149
+        },
+        "n_total_possible_pairs": 35778,
+        "n_intra_cluster_pairs": 130,
+        "search_space_reduction_ratio": 0.0036335178042372408,
+        "brute_force_meta": {
+          "n_tests": 35778,
+          "expected_false_positives": 1788.9,
+          "n_bh_survivors": 0,
+          "n_by_survivors": 0
+        },
+        "discovery_quality": {
+          "ggr_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 2,
+            "pct_oos_stationary": 0.1,
+            "n_converged": 6,
+            "pct_converged_at_least_once": 0.3,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 13.379426291516662,
+              "median": 8.077368355856896,
+              "min": 4.073409922073961,
+              "max": 47.89213090593972
+            }
+          },
+          "cluster_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 1,
+            "pct_oos_stationary": 0.05,
+            "n_converged": 4,
+            "pct_converged_at_least_once": 0.2,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 11.36867451402349,
+              "median": 10.023863522903909,
+              "min": 3.9981135465365707,
+              "max": 22.879169229279636
+            }
+          },
+          "cluster_coint": {
+            "n_stationarity_evaluable": 6,
+            "n_oos_stationary": 0,
+            "pct_oos_stationary": 0.0,
+            "n_converged": 2,
+            "pct_converged_at_least_once": 0.3333333333333333,
+            "half_life_oos_days": {
+              "n": 6,
+              "mean": 14.82701714999341,
+              "median": 13.143218317988529,
+              "min": 6.283651177864351,
+              "max": 29.92059002583293
+            }
+          },
+          "brute_force": {
+            "n_stationarity_evaluable": 0,
+            "n_oos_stationary": 0,
+            "pct_oos_stationary": null,
+            "n_converged": 0,
+            "pct_converged_at_least_once": null,
+            "half_life_oos_days": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "min": null,
+              "max": null
+            }
+          }
+        },
+        "n_candidates": {
+          "ggr_ssd": 20,
+          "cluster_ssd": 20,
+          "cluster_coint": 6,
+          "brute_force": 0
+        },
+        "performance": {
+          "ggr_ssd": {
+            "mean_monthly": -0.0005775879043716607,
+            "t_stat_nw": -0.6788508231215288,
+            "annualized_sharpe": -0.4604849706961371,
+            "n_months": 6
+          },
+          "cluster_ssd": {
+            "mean_monthly": 0.0009913750545083775,
+            "t_stat_nw": 2.261310452189121,
+            "annualized_sharpe": 1.1043435468828495,
+            "n_months": 6
+          },
+          "cluster_coint": {
+            "mean_monthly": 0.0030545768407200437,
+            "t_stat_nw": 4.806193339672617,
+            "annualized_sharpe": 3.85416303987639,
+            "n_months": 6
+          },
+          "brute_force": {
+            "mean_monthly": 0.0,
+            "t_stat_nw": null,
+            "annualized_sharpe": null,
+            "n_months": 6
+          }
+        }
+      },
+      "2007-04": {
+        "n_universe": 281,
+        "clustering": {
+          "method": "optics",
+          "n_clusters": 21,
+          "largest_cluster_size": 8,
+          "largest_cluster_share_of_labeled": 0.08,
+          "n_labeled": 100,
+          "n_universe": 281,
+          "noise_excluded": 181,
+          "noise_share": 0.6441281138790036
+        },
+        "n_total_possible_pairs": 39340,
+        "n_intra_cluster_pairs": 209,
+        "search_space_reduction_ratio": 0.005312658871377733,
+        "brute_force_meta": {
+          "n_tests": 39340,
+          "expected_false_positives": 1967.0,
+          "n_bh_survivors": 1,
+          "n_by_survivors": 0
+        },
+        "discovery_quality": {
+          "ggr_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 2,
+            "pct_oos_stationary": 0.1,
+            "n_converged": 11,
+            "pct_converged_at_least_once": 0.55,
+            "half_life_oos_days": {
+              "n": 19,
+              "mean": 21.061909421550276,
+              "median": 8.05905178417926,
+              "min": 3.3931252904182836,
+              "max": 175.55008527671362
+            }
+          },
+          "cluster_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 1,
+            "pct_oos_stationary": 0.05,
+            "n_converged": 10,
+            "pct_converged_at_least_once": 0.5,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 15.960148204455766,
+              "median": 8.657615619421463,
+              "min": 4.244226294706674,
+              "max": 71.04549047867664
+            }
+          },
+          "cluster_coint": {
+            "n_stationarity_evaluable": 10,
+            "n_oos_stationary": 4,
+            "pct_oos_stationary": 0.4,
+            "n_converged": 0,
+            "pct_converged_at_least_once": 0.0,
+            "half_life_oos_days": {
+              "n": 10,
+              "mean": 18.232362975458855,
+              "median": 6.9140003068259865,
+              "min": 2.267187030273121,
+              "max": 64.86936589671983
+            }
+          },
+          "brute_force": {
+            "n_stationarity_evaluable": 1,
+            "n_oos_stationary": 1,
+            "pct_oos_stationary": 1.0,
+            "n_converged": 0,
+            "pct_converged_at_least_once": 0.0,
+            "half_life_oos_days": {
+              "n": 1,
+              "mean": 2.958332773287992,
+              "median": 2.958332773287992,
+              "min": 2.958332773287992,
+              "max": 2.958332773287992
+            }
+          }
+        },
+        "n_candidates": {
+          "ggr_ssd": 20,
+          "cluster_ssd": 20,
+          "cluster_coint": 10,
+          "brute_force": 1
+        },
+        "performance": {
+          "ggr_ssd": {
+            "mean_monthly": -0.0017831470742180255,
+            "t_stat_nw": -0.4597564906292105,
+            "annualized_sharpe": -0.32875999573603687,
+            "n_months": 6
+          },
+          "cluster_ssd": {
+            "mean_monthly": 0.00391169069393288,
+            "t_stat_nw": 3.9570461112621347,
+            "annualized_sharpe": 1.8427246071276084,
+            "n_months": 6
+          },
+          "cluster_coint": {
+            "mean_monthly": -0.0016429362572710033,
+            "t_stat_nw": -2.059840027217013,
+            "annualized_sharpe": -1.3501821753142877,
+            "n_months": 6
+          },
+          "brute_force": {
+            "mean_monthly": 0.0,
+            "t_stat_nw": null,
+            "annualized_sharpe": null,
+            "n_months": 6
+          }
+        }
+      },
+      "2008-02": {
+        "n_universe": 289,
+        "clustering": {
+          "method": "optics",
+          "n_clusters": 14,
+          "largest_cluster_size": 13,
+          "largest_cluster_share_of_labeled": 0.18309859154929578,
+          "n_labeled": 71,
+          "n_universe": 289,
+          "noise_excluded": 218,
+          "noise_share": 0.754325259515571
+        },
+        "n_total_possible_pairs": 41616,
+        "n_intra_cluster_pairs": 207,
+        "search_space_reduction_ratio": 0.004974048442906574,
+        "brute_force_meta": {
+          "n_tests": 41616,
+          "expected_false_positives": 2080.8,
+          "n_bh_survivors": 0,
+          "n_by_survivors": 0
+        },
+        "discovery_quality": {
+          "ggr_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 3,
+            "pct_oos_stationary": 0.15,
+            "n_converged": 10,
+            "pct_converged_at_least_once": 0.5,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 13.238003019062722,
+              "median": 10.232962335487354,
+              "min": 3.261195787011293,
+              "max": 38.96350496285061
+            }
+          },
+          "cluster_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 5,
+            "pct_oos_stationary": 0.25,
+            "n_converged": 11,
+            "pct_converged_at_least_once": 0.55,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 9.27289930413075,
+              "median": 5.509775440758192,
+              "min": 2.05788010068853,
+              "max": 29.844919359184317
+            }
+          },
+          "cluster_coint": {
+            "n_stationarity_evaluable": 18,
+            "n_oos_stationary": 1,
+            "pct_oos_stationary": 0.05555555555555555,
+            "n_converged": 5,
+            "pct_converged_at_least_once": 0.2777777777777778,
+            "half_life_oos_days": {
+              "n": 18,
+              "mean": 14.364671077202964,
+              "median": 11.85198209690439,
+              "min": 2.9269926051759216,
+              "max": 56.005315880213765
+            }
+          },
+          "brute_force": {
+            "n_stationarity_evaluable": 0,
+            "n_oos_stationary": 0,
+            "pct_oos_stationary": null,
+            "n_converged": 0,
+            "pct_converged_at_least_once": null,
+            "half_life_oos_days": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "min": null,
+              "max": null
+            }
+          }
+        },
+        "n_candidates": {
+          "ggr_ssd": 20,
+          "cluster_ssd": 20,
+          "cluster_coint": 18,
+          "brute_force": 0
+        },
+        "performance": {
+          "ggr_ssd": {
+            "mean_monthly": -0.0006851680506151743,
+            "t_stat_nw": -0.19581797662730857,
+            "annualized_sharpe": -0.13661784533307553,
+            "n_months": 6
+          },
+          "cluster_ssd": {
+            "mean_monthly": 0.007246480043079487,
+            "t_stat_nw": 3.7192734079203253,
+            "annualized_sharpe": 2.5789349969883757,
+            "n_months": 6
+          },
+          "cluster_coint": {
+            "mean_monthly": -0.00931514671455919,
+            "t_stat_nw": -1.3265763990190378,
+            "annualized_sharpe": -1.2416582426437892,
+            "n_months": 6
+          },
+          "brute_force": {
+            "mean_monthly": 0.0,
+            "t_stat_nw": null,
+            "annualized_sharpe": null,
+            "n_months": 6
+          }
+        }
+      },
+      "2008-12": {
+        "n_universe": 307,
+        "clustering": {
+          "method": "optics",
+          "n_clusters": 20,
+          "largest_cluster_size": 9,
+          "largest_cluster_share_of_labeled": 0.09090909090909091,
+          "n_labeled": 99,
+          "n_universe": 307,
+          "noise_excluded": 208,
+          "noise_share": 0.6775244299674267
+        },
+        "n_total_possible_pairs": 46971,
+        "n_intra_cluster_pairs": 227,
+        "search_space_reduction_ratio": 0.004832769155436333,
+        "brute_force_meta": {
+          "n_tests": 46971,
+          "expected_false_positives": 2348.55,
+          "n_bh_survivors": 3,
+          "n_by_survivors": 1
+        },
+        "discovery_quality": {
+          "ggr_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 2,
+            "pct_oos_stationary": 0.1,
+            "n_converged": 13,
+            "pct_converged_at_least_once": 0.65,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 14.246359319438872,
+              "median": 11.44887154199883,
+              "min": 6.143457698176681,
+              "max": 31.709662564001132
+            }
+          },
+          "cluster_ssd": {
+            "n_stationarity_evaluable": 20,
+            "n_oos_stationary": 2,
+            "pct_oos_stationary": 0.1,
+            "n_converged": 10,
+            "pct_converged_at_least_once": 0.5,
+            "half_life_oos_days": {
+              "n": 20,
+              "mean": 16.409167112277203,
+              "median": 12.91183827182623,
+              "min": 3.8852338667214004,
+              "max": 59.02023527706105
+            }
+          },
+          "cluster_coint": {
+            "n_stationarity_evaluable": 17,
+            "n_oos_stationary": 4,
+            "pct_oos_stationary": 0.23529411764705882,
+            "n_converged": 9,
+            "pct_converged_at_least_once": 0.5294117647058824,
+            "half_life_oos_days": {
+              "n": 17,
+              "mean": 11.852253572324756,
+              "median": 8.67661511834105,
+              "min": 4.588030961839349,
+              "max": 33.95888628325137
+            }
+          },
+          "brute_force": {
+            "n_stationarity_evaluable": 0,
+            "n_oos_stationary": 0,
+            "pct_oos_stationary": null,
+            "n_converged": 0,
+            "pct_converged_at_least_once": null,
+            "half_life_oos_days": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "min": null,
+              "max": null
+            }
+          }
+        },
+        "n_candidates": {
+          "ggr_ssd": 20,
+          "cluster_ssd": 20,
+          "cluster_coint": 17,
+          "brute_force": 0
+        },
+        "performance": {
+          "ggr_ssd": {
+            "mean_monthly": 0.008986476531728002,
+            "t_stat_nw": 2.0008776261087373,
+            "annualized_sharpe": 1.3409753135315559,
+            "n_months": 7
+          },
+          "cluster_ssd": {
+            "mean_monthly": 0.008899458501675521,
+            "t_stat_nw": 5.440772578583709,
+            "annualized_sharpe": 3.1636794459985444,
+            "n_months": 7
+          },
+          "cluster_coint": {
+            "mean_monthly": 0.007323449863757801,
+            "t_stat_nw": 2.6581760515796478,
+            "annualized_sharpe": 1.2928827244143792,
+            "n_months": 7
+          },
+          "brute_force": {
+            "mean_monthly": 0.0,
+            "t_stat_nw": null,
+            "annualized_sharpe": null,
+            "n_months": 7
+          }
+        }
       }
     },
-    "performance": {
-      "ggr_ssd": {
-        "mean_monthly": 0.0018350620041522906,
-        "t_stat_nw": 1.1006702248626816,
-        "annualized_sharpe": 0.39931172313516844,
-        "n_months": 44
+    "aggregated": {
+      "discovery_quality": {
+        "ggr_ssd": {
+          "n_stationarity_evaluable": 140,
+          "pct_oos_stationary": 0.12142857142857143,
+          "n_simulated": 140,
+          "pct_converged_at_least_once": 0.5214285714285715,
+          "half_life_oos_days_mean_of_run_means": 74.55573286562392
+        },
+        "cluster_ssd": {
+          "n_stationarity_evaluable": 140,
+          "pct_oos_stationary": 0.12857142857142856,
+          "n_simulated": 140,
+          "pct_converged_at_least_once": 0.3357142857142857,
+          "half_life_oos_days_mean_of_run_means": 13.881548680971642
+        },
+        "cluster_coint": {
+          "n_stationarity_evaluable": 102,
+          "pct_oos_stationary": 0.16666666666666666,
+          "n_simulated": 102,
+          "pct_converged_at_least_once": 0.21568627450980393,
+          "half_life_oos_days_mean_of_run_means": 14.009262015256365
+        },
+        "brute_force": {
+          "n_stationarity_evaluable": 7,
+          "pct_oos_stationary": 0.14285714285714285,
+          "n_simulated": 7,
+          "pct_converged_at_least_once": 0.0,
+          "half_life_oos_days_mean_of_run_means": 6.328518390476536
+        }
       },
-      "cluster_ssd": {
-        "mean_monthly": 0.003082992250221017,
-        "t_stat_nw": 1.9779675167435937,
-        "annualized_sharpe": 1.1144435882708432,
-        "n_months": 44
+      "performance": {
+        "ggr_ssd": {
+          "mean_monthly": 0.0018350620041522906,
+          "t_stat_nw": 1.1006702248626816,
+          "annualized_sharpe": 0.39931172313516844,
+          "n_months": 44
+        },
+        "cluster_ssd": {
+          "mean_monthly": 0.003082992250221017,
+          "t_stat_nw": 1.9779675167435937,
+          "annualized_sharpe": 1.1144435882708432,
+          "n_months": 44
+        },
+        "cluster_coint": {
+          "mean_monthly": -0.0004367666646382815,
+          "t_stat_nw": -0.2641073538839768,
+          "annualized_sharpe": -0.10906986426895535,
+          "n_months": 44
+        },
+        "brute_force": {
+          "mean_monthly": 0.0,
+          "t_stat_nw": null,
+          "annualized_sharpe": null,
+          "n_months": 44
+        }
       },
-      "cluster_coint": {
-        "mean_monthly": -0.0004367666646382815,
-        "t_stat_nw": -0.2641073538839768,
-        "annualized_sharpe": -0.10906986426895535,
-        "n_months": 44
-      },
-      "brute_force": {
-        "mean_monthly": 0.0,
-        "t_stat_nw": null,
-        "annualized_sharpe": null,
-        "n_months": 44
+      "search_space_reduction": {
+        "total_possible_pairs": 266822,
+        "total_intra_cluster_pairs": 1396,
+        "ratio": 0.005231952387734145
       }
-    },
-    "search_space_reduction": {
-      "total_possible_pairs": 266822,
-      "total_intra_cluster_pairs": 1396,
-      "ratio": 0.005231952387734145
     }
   }
 }

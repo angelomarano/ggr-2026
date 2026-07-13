@@ -270,8 +270,17 @@ def engle_granger_pair(price_index: pd.DataFrame, i: str, j: str) -> dict:
     See module docstring for why `price_index` (formation.py's normalized
     P*_it, P*_i0=1) is a valid log-price level for this test.
 
-    Returns {"t_stat", "p_value", "half_life_days"} (see _half_life for
-    when half_life_days is None).
+    Returns {"t_stat", "p_value", "half_life_days", "residual_std"} (see
+    _half_life for when half_life_days is None).
+
+    residual_std = resid.std(ddof=0), the spread's own scale on the
+    log-price axis this test operates on - NOT the SSD-style sigma from
+    formation.spread_sigma (std of a *normalized price-index* spread,
+    P*_i - P*_j). The two are different units on a different scale (log
+    vs. normalized-price-level), so a sigma computed one way must never be
+    fed into a trigger meant to be compared against a spread computed the
+    other way. No extra regression: resid is already computed above for
+    _half_life, this just reports its dispersion too.
     """
     log_i = np.log(price_index[i].to_numpy())
     log_j = np.log(price_index[j].to_numpy())
@@ -281,6 +290,7 @@ def engle_granger_pair(price_index: pd.DataFrame, i: str, j: str) -> dict:
         "t_stat": float(t_stat),
         "p_value": float(p_value),
         "half_life_days": _half_life(resid),
+        "residual_std": float(resid.std(ddof=0)),
     }
 
 
@@ -316,11 +326,14 @@ def cointegration_intra_cluster_ranking(
     ascending p-value and truncated to top_n.
 
     Returns a DataFrame (rank-indexed like formation.rank_pairs) with
-    columns ticker_1, ticker_2, t_stat, p_value, half_life_days. Empty
-    (same columns) if no intra-cluster pair survives the filter.
+    columns ticker_1, ticker_2, t_stat, p_value, half_life_days,
+    residual_std (the EG residual's own std, see engle_granger_pair - the
+    scale a caller must use for this pair's trigger, NOT
+    formation.spread_sigma's SSD-style sigma). Empty (same columns) if no
+    intra-cluster pair survives the filter.
     """
     pairs = intra_cluster_pairs(clusters)
-    columns = ["ticker_1", "ticker_2", "t_stat", "p_value", "half_life_days"]
+    columns = ["ticker_1", "ticker_2", "t_stat", "p_value", "half_life_days", "residual_std"]
     if not pairs:
         return pd.DataFrame(columns=columns)
 
@@ -415,8 +428,11 @@ def brute_force_cointegration_screen(
 
     Returns:
       "all_pairs": DataFrame, one row per pair tested - ticker_1,
-        ticker_2, t_stat, p_value, half_life_days, passes_filter (p and
-        half-life filter, PROTOCOL.md §4/H5 step 5), bh_survivor,
+        ticker_2, t_stat, p_value, half_life_days, residual_std (the EG
+        residual's own std, see engle_granger_pair - the scale a caller
+        must use for this pair's trigger, NOT formation.spread_sigma's
+        SSD-style sigma), passes_filter (p and half-life filter,
+        PROTOCOL.md §4/H5 step 5), bh_survivor,
         by_survivor (Benjamini-Hochberg / Benjamini-Yekutieli at
         fdr_alpha, computed over the FULL p-value distribution of all
         tested pairs - BH/BY need every p-value to control the FDR
@@ -437,7 +453,7 @@ def brute_force_cointegration_screen(
         ranked by ascending p-value, truncated to top_n.
     """
     tickers = sorted(price_index.columns)
-    columns = ["ticker_1", "ticker_2", "t_stat", "p_value", "half_life_days"]
+    columns = ["ticker_1", "ticker_2", "t_stat", "p_value", "half_life_days", "residual_std"]
     rows = [
         {"ticker_1": i, "ticker_2": j, **engle_granger_pair(price_index, i, j)}
         for i, j in itertools.combinations(tickers, 2)

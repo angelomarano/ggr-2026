@@ -45,6 +45,26 @@ For every list, on the SAME run's TRADING period (already-cached data):
         FULL trading period (it already handles mid-period delisting
         internally); an event {"event": "close", "reason": "crossing"}
         counts as convergence, {"end_of_period", "delisting"} doesn't.
+        Trigger sigma: SECOND EXECUTION NOTE (2026-07-13, see
+        DEVIATIONS.md) -- the first execution passed formation.
+        spread_sigma (normalized-price-index scale) to every list,
+        including cluster_coint/brute_force, which are selected on the
+        Engle-Granger LOG-PRICE residual instead: a scale mismatch (the
+        trigger threshold |spread|>k*sigma was being compared against a
+        spread on one scale using a sigma measured on a different one).
+        Fixed via _sigma_for_pair/SIGMA_SOURCE_BY_LIST below:
+        cluster_coint/brute_force now use their own selection-time
+        residual_std (engle_granger_pair, same regression already run,
+        no new computation); ggr_ssd/cluster_ssd are unaffected (already
+        consistent, spread_sigma both at selection and at simulation).
+        This changes ONLY "% converged at least once" and "net
+        performance" for cluster_coint/brute_force -- stationarity and
+        half-life OOS are unaffected (see _oos_stationarity_and_half_life:
+        self-contained, p-value and half-life both come from the SAME
+        trading-period EG regression, no external sigma of any kind is
+        ever compared against anything there). Both pre- and post-fix
+        numbers are kept in h5_discovery_quality.json/.md, same
+        never-silently-overwrite convention as Gate 2's data-quality fix.
       - half-life OOS distribution: the half_life_days field from the same
         fresh trading-period Engle-Granger test used for stationarity.
   - multiple-testing accounting: n_tests declared per list (intra_cluster_
@@ -121,9 +141,23 @@ from src.trading import _last_valid_day, simulate_pair_wait_one_day
 
 OUT_DIR = Path("results/replication")
 GOLDEN_SET_CSV = OUT_DIR / "golden_set.csv"
+RESULTS_JSON = OUT_DIR / "h5_discovery_quality.json"
 
 LIST_NAMES = ("ggr_ssd", "cluster_ssd", "cluster_coint", "brute_force")
 MIN_OOS_DAYS_FOR_ADF = 30  # declared here, see module docstring
+
+SIGMA_FIX_NOTE = (
+    "cluster_coint/brute_force's simulate_pair_wait_one_day trigger sigma switched from "
+    "formation.spread_sigma (SSD/normalized-price-index scale -- a mismatch for pairs "
+    "selected on the Engle-Granger log-price residual) to their own selection-time "
+    "residual_std (engle_granger_pair, same regression already run, no new computation); "
+    "ggr_ssd/cluster_ssd are unaffected (already consistent). This changes ONLY "
+    "pct_converged_at_least_once and net performance for cluster_coint/brute_force -- "
+    "pct_oos_stationary and half_life_oos_days are scale-independent (self-contained in "
+    "the trading-period Engle-Granger regression, no external sigma involved) and are "
+    "verified identical before/after in this same run, not just assumed. See "
+    "DEVIATIONS.md, 2026-07-13 entry, and this module's docstring."
+)
 
 
 def _sample_run_ids(cal: pd.DataFrame, n_samples: int = 8) -> list[str]:
@@ -226,15 +260,41 @@ def _converged_at_least_once(trades: list[dict]) -> bool:
     return any(ev["event"] == "close" and ev["reason"] == "crossing" for ev in trades)
 
 
+def _sigma_for_pair(sigma_source: str, price_index: pd.DataFrame, row: pd.Series, t1: str, t2: str) -> float:
+    """The trading trigger is |spread| > k*sigma, so sigma must be on the
+    SAME scale as the spread it's compared against. GGR-SSD and Cluster+SSD
+    select pairs by (and simulate on) the normalized-price-index spread
+    (formation.spread_sigma's scale) -- consistent, unchanged here.
+    Cluster+Cointegration and Brute-force select pairs by the Engle-Granger
+    LOG-PRICE residual instead; simulate_pair_wait_one_day's trigger for
+    those pairs must use that same residual's own std (residual_std,
+    already computed once during selection and carried in the pairs
+    table -- no new regression), not formation.spread_sigma's unrelated
+    normalized-price-index scale."""
+    if sigma_source == "ssd":
+        return spread_sigma(price_index, t1, t2)
+    return float(row["residual_std"])
+
+
+SIGMA_SOURCE_BY_LIST = {
+    "ggr_ssd": "ssd",
+    "cluster_ssd": "ssd",
+    "cluster_coint": "residual_std",
+    "brute_force": "residual_std",
+}
+
+
 def _discovery_quality_and_performance(
     pairs_table: pd.DataFrame,
     price_index: pd.DataFrame,
     trading_returns: pd.DataFrame,
     n_days: int,
+    sigma_source: str,
 ) -> dict:
     """Discovery-quality metrics + committed-capital performance for one
     candidate list on one run. See module docstring for every design
-    choice referenced by name below."""
+    choice referenced by name below, and _sigma_for_pair for why
+    sigma_source matters."""
     n_stationarity_evaluable = 0
     n_stationary = 0
     half_lives: list[float] = []
@@ -257,7 +317,7 @@ def _discovery_quality_and_performance(
             if oos["half_life_days"] is not None:
                 half_lives.append(oos["half_life_days"])
 
-        sigma = spread_sigma(price_index, t1, t2)
+        sigma = _sigma_for_pair(sigma_source, price_index, row, t1, t2)
         if sigma == 0.0:
             continue
         res = simulate_pair_wait_one_day(
@@ -307,7 +367,9 @@ def _run_one_run(run_id: str, r, golden_set: set, membership) -> dict:
     monthly_by_list = {}
     for name in LIST_NAMES:
         table = built["lists"][name]
-        result = _discovery_quality_and_performance(table, price_index, trading_returns, n_days)
+        result = _discovery_quality_and_performance(
+            table, price_index, trading_returns, n_days, sigma_source=SIGMA_SOURCE_BY_LIST[name]
+        )
         monthly_by_list[name] = compound_to_monthly(result.pop("committed_monthly_return"), trading_days)
         per_list[name] = result
 
@@ -357,6 +419,18 @@ def _json_safe(obj):
 
 def main():
     t_start = time.time()
+
+    # Second-execution bookkeeping (SIGMA_FIX_NOTE): if a previous run's
+    # output is already on disk, its "post_fix" section (or, on a first-ever
+    # post-fix run, the whole un-nested pre-fix result) is this run's
+    # "before" snapshot -- preserved below, never silently overwritten, same
+    # convention as notebooks/03b_gate2_refit_full_universe.py.
+    pre_fix_results = None
+    if RESULTS_JSON.exists():
+        with open(RESULTS_JSON) as f:
+            previous = json.load(f)
+        pre_fix_results = previous.get("post_fix", previous)
+
     membership = load_membership(config.CONSTITUENTS_CSV)
     golden_set = set(pd.read_csv(GOLDEN_SET_CSV)["ticker"])
 
@@ -471,13 +545,47 @@ def main():
     # value, but the report should render it the same way as None either way.
     safe_results = _json_safe(results)
 
+    scale_independence_check = None
+    if pre_fix_results is not None:
+        scale_independence_check = _verify_stationarity_and_half_life_unchanged(pre_fix_results, safe_results)
+        print(
+            "Scale-independence check (pct_oos_stationary / half_life_oos_days_mean_of_run_means, "
+            f"pre-fix vs post-fix): {'IDENTICAL, as expected' if scale_independence_check['identical'] else 'MISMATCH -- investigate'}"
+        )
+
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    with open(OUT_DIR / "h5_discovery_quality.json", "w") as f:
-        json.dump(safe_results, f, indent=2)
-    print(f"Saved {OUT_DIR / 'h5_discovery_quality.json'}")
+    merged = {
+        "sigma_fix_note": SIGMA_FIX_NOTE,
+        "scale_independence_check": scale_independence_check,
+        "post_fix": safe_results,
+        "pre_fix": pre_fix_results,
+    }
+    with open(RESULTS_JSON, "w") as f:
+        json.dump(merged, f, indent=2)
+    print(f"Saved {RESULTS_JSON}")
 
     _write_markdown_report(safe_results)
+    if pre_fix_results is not None:
+        _append_sigma_fix_section(pre_fix_results, safe_results, scale_independence_check)
     print(f"\nDone in {time.time() - t_start:.1f}s total.")
+
+
+def _verify_stationarity_and_half_life_unchanged(pre_fix: dict, post_fix: dict) -> dict:
+    """The sigma fix must NOT change pct_oos_stationary or
+    half_life_oos_days_mean_of_run_means for ANY list (see SIGMA_FIX_NOTE:
+    both come from a fresh trading-period Engle-Granger regression that
+    never touches sigma of any kind). Checked here, not just claimed in a
+    comment: exact equality is expected, since nothing in the computation
+    path for these two fields changed at all (same code, same cached
+    inputs, deterministic statsmodels calls)."""
+    mismatches = []
+    for name in LIST_NAMES:
+        pre_dq = pre_fix["aggregated"]["discovery_quality"][name]
+        post_dq = post_fix["aggregated"]["discovery_quality"][name]
+        for field in ("pct_oos_stationary", "half_life_oos_days_mean_of_run_means"):
+            if pre_dq[field] != post_dq[field]:
+                mismatches.append({"list": name, "field": field, "pre_fix": pre_dq[field], "post_fix": post_dq[field]})
+    return {"identical": len(mismatches) == 0, "mismatches": mismatches}
 
 
 def _list_label(name: str) -> str:
@@ -609,6 +717,87 @@ def _write_markdown_report(results: dict) -> None:
     with open(OUT_DIR / "h5_discovery_quality.md", "w") as f:
         f.write("\n".join(lines) + "\n")
     print(f"Saved {OUT_DIR / 'h5_discovery_quality.md'}")
+
+
+def _append_sigma_fix_section(pre_fix: dict, post_fix: dict, scale_independence_check: dict) -> None:
+    """Appends a before/after comparison section to the already-written
+    h5_discovery_quality.md, same "second execution, not a silent
+    overwrite" convention as gate2_report.md's own before/after section.
+    The tables above (written by _write_markdown_report) already show the
+    POST-FIX numbers as primary; this section makes the PRE-FIX numbers
+    explicitly visible too, restricted to the fields the fix could
+    possibly have changed (pct_converged_at_least_once, performance) plus
+    an explicit confirmation for the fields it could NOT have changed
+    (pct_oos_stationary, half-life OOS)."""
+    lines = [
+        "",
+        "---",
+        "",
+        "## Second execution: sigma-scale fix for Engle-Granger-selected pairs",
+        "",
+        SIGMA_FIX_NOTE,
+        "",
+        "This is a SECOND, explicitly logged execution of this notebook, not a silent "
+        "overwrite: the pre-fix numbers are preserved below for direct comparison "
+        "(and in full under the \"pre_fix\" key of h5_discovery_quality.json).",
+        "",
+    ]
+
+    if scale_independence_check["identical"]:
+        lines.append(
+            "**Verified, not assumed:** pct_oos_stationary and half_life_oos_days_mean_of_run_means "
+            "are byte-identical pre-fix vs post-fix for all 4 lists (checked programmatically in this "
+            "same run, not just argued from the code) -- consistent with _oos_stationarity_and_half_life "
+            "never touching sigma of any kind (see module docstring)."
+        )
+    else:
+        lines.append(
+            "**WARNING:** pct_oos_stationary / half_life_oos_days_mean_of_run_means changed pre-fix vs "
+            "post-fix, which the fix was not expected to touch. Mismatches: "
+            f"{scale_independence_check['mismatches']}"
+        )
+
+    lines += [
+        "",
+        "### % converged at least once, before vs after (the field the fix directly targets)",
+        "",
+        "| list | pre-fix | post-fix | delta |",
+        "|---|---|---|---|",
+    ]
+    for name in LIST_NAMES:
+        pre_pct = pre_fix["aggregated"]["discovery_quality"][name]["pct_converged_at_least_once"]
+        post_pct = post_fix["aggregated"]["discovery_quality"][name]["pct_converged_at_least_once"]
+        pre_s = f"{pre_pct:.1%}" if pre_pct is not None else "n/a"
+        post_s = f"{post_pct:.1%}" if post_pct is not None else "n/a"
+        delta_s = f"{(post_pct - pre_pct):+.1%}" if pre_pct is not None and post_pct is not None else "n/a"
+        lines.append(f"| {_list_label(name)} | {pre_s} | {post_s} | {delta_s} |")
+
+    lines += [
+        "",
+        "### Net performance, before vs after (secondary, same nominal n_selected=20 convention)",
+        "",
+        "| list | mean/month (pre) | mean/month (post) | t (NW, pre) | t (NW, post) | Sharpe (pre) | Sharpe (post) |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for name in LIST_NAMES:
+        pre_s = pre_fix["aggregated"]["performance"][name]
+        post_s = post_fix["aggregated"]["performance"][name]
+
+        def fmt(s, key, pct=False):
+            v = s[key]
+            if v is None:
+                return "n/a"
+            return f"{v:.4%}" if pct else f"{v:.2f}"
+
+        lines.append(
+            f"| {_list_label(name)} | {fmt(pre_s, 'mean_monthly', pct=True)} | {fmt(post_s, 'mean_monthly', pct=True)} | "
+            f"{fmt(pre_s, 't_stat_nw')} | {fmt(post_s, 't_stat_nw')} | "
+            f"{fmt(pre_s, 'annualized_sharpe')} | {fmt(post_s, 'annualized_sharpe')} |"
+        )
+
+    with open(OUT_DIR / "h5_discovery_quality.md", "a") as f:
+        f.write("\n".join(lines) + "\n")
+    print(f"Appended sigma-fix before/after section to {OUT_DIR / 'h5_discovery_quality.md'}")
 
 
 if __name__ == "__main__":

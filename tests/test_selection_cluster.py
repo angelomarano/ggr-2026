@@ -227,7 +227,7 @@ def test_ssd_intra_cluster_ranking_never_crosses_clusters():
 
 # ---------------------------------------------------- (c) Engle-Granger
 
-def _synthetic_cointegrated_pair(seed: int, n: int = 600, phi: float = 0.9):
+def _synthetic_cointegrated_pair(seed: int, n: int = 600, phi: float = 0.9, innovation_std: float = 0.015):
     """P2 = P1 * exp(u_t), u ~ AR(1) stationary with the given phi (same
     design as PROTOCOL.md §6's synthetic cointegration test)."""
     rng = np.random.default_rng(seed)
@@ -235,7 +235,7 @@ def _synthetic_cointegrated_pair(seed: int, n: int = 600, phi: float = 0.9):
     p1 = np.exp(log_p1)
     u = np.zeros(n)
     for t in range(1, n):
-        u[t] = phi * u[t - 1] + rng.normal(0, 0.015)
+        u[t] = phi * u[t - 1] + rng.normal(0, innovation_std)
     p2 = p1 * np.exp(u)
     return p1, p2
 
@@ -261,6 +261,44 @@ def test_engle_granger_pair_cointegrated_pair_low_pvalue():
     assert result["p_value"] < 0.01
     assert result["half_life_days"] is not None
     assert config.HALF_LIFE_RANGE_DAYS[0] <= result["half_life_days"] <= config.HALF_LIFE_RANGE_DAYS[1]
+
+
+def test_engle_granger_pair_residual_std_matches_ar1_theoretical_std():
+    """
+    residual_std should approach the AR(1)/OU process' own theoretical
+    STATIONARY standard deviation: for u_t = phi*u_{t-1} + eps_t with
+    eps_t ~ N(0, innovation_std^2), the stationary (unconditional) std is
+    innovation_std / sqrt(1 - phi^2) - the standard closed-form result for
+    a mean-reverting AR(1) (Var(u) = phi^2*Var(u) + innovation_std^2 at the
+    fixed point => Var(u) = innovation_std^2 / (1-phi^2)).
+
+    Not exactly hand-computable to the last digit (same caveat as the
+    p-value tests above): the OLS cointegrating regression only recovers
+    the true 1:1 relationship between log(P1) and log(P2) asymptotically
+    (Stock 1987 superconsistency), so a LARGE sample (n=5000, vs. 600
+    elsewhere in this file) is used here specifically to make the
+    approximation tight - at n=600 the ratio to the theoretical value
+    can be off by 15-20% across seeds, purely from finite-sample slope
+    estimation noise, not from any bug (verified interactively before
+    writing this test). A generous +-15% relative tolerance is used to
+    stay robust to the residual Monte Carlo noise.
+
+    phi=0.9, innovation_std=0.015 (this file's usual synthetic-pair
+    defaults) -> theoretical stationary std = 0.015/sqrt(1-0.9^2) =
+    0.0344...
+    """
+    phi = 0.9
+    innovation_std = 0.015
+    theoretical_std = innovation_std / math.sqrt(1 - phi ** 2)
+
+    p1, p2 = _synthetic_cointegrated_pair(seed=42, n=5000, phi=phi, innovation_std=innovation_std)
+    price_index = pd.DataFrame({"P1": p1, "P2": p2})
+
+    result = engle_granger_pair(price_index, "P1", "P2")
+
+    assert result["residual_std"] is not None
+    ratio = result["residual_std"] / theoretical_std
+    assert 0.85 < ratio < 1.15, f"residual_std={result['residual_std']:.5f} vs theoretical={theoretical_std:.5f} (ratio={ratio:.3f})"
 
 
 def test_engle_granger_pair_independent_walks_high_pvalue():
@@ -455,6 +493,7 @@ if __name__ == "__main__":
     test_intra_cluster_pairs_only_within_same_label()
     test_ssd_intra_cluster_ranking_never_crosses_clusters()
     test_engle_granger_pair_cointegrated_pair_low_pvalue()
+    test_engle_granger_pair_residual_std_matches_ar1_theoretical_std()
     test_engle_granger_pair_independent_walks_high_pvalue()
     test_half_life_hand_computed_ar1()
     test_half_life_none_outside_valid_phi_range()

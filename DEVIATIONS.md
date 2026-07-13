@@ -160,3 +160,61 @@ b(HighVol) H2 = 0.31470% (t=2.143) in "full_universe" contro 0.31411%
 Le differenze sono piccole (coerenti con sole 2 run su 192 che cambiano
 selezione) ma non nulle: H2/H3/H4, non solo le descrittive e il bootstrap,
 sono state ricalcolate post-fix.
+
+## 2026-07-13 — H5: mismatch di scala nel sigma di trading per le coppie selezionate via Engle-Granger
+
+**Osservato:** in notebooks/05_h5_discovery_quality.py, il sigma passato a
+simulate_pair_wait_one_day (soglia di apertura |spread| > k*sigma) era
+formation.spread_sigma per TUTTE e quattro le liste candidate, incluse
+cluster_coint (Variante B) e brute_force - selezionate pero' via
+Engle-Granger sul RESIDUO del log-prezzo, non sull'indice di prezzo
+normalizzato. spread_sigma stima la deviazione standard di
+P*_i - P*_j (indice di prezzo normalizzato, la stessa quantita' che
+src/trading.py effettivamente soglia), quindi resta corretto per
+ggr_ssd/cluster_ssd; per cluster_coint/brute_force e' una stima presa da
+una quantita' diversa da quella su cui la coppia e' stata selezionata.
+
+**Causa:** engle_granger_pair (src/selection_cluster.py) non esponeva la
+deviazione standard del proprio residuo - solo t_stat/p_value/half_life_days
+- quindi non c'era alcun valore alternativo da passare al motore di trading
+per le coppie selezionate via cointegrazione.
+
+**Fix:** aggiunto il campo "residual_std" (resid.std(ddof=0), nessuna
+regressione aggiuntiva - il residuo esiste gia' nella funzione) al dict di
+ritorno di engle_granger_pair, esposto come colonna nelle tabelle di
+cointegration_intra_cluster_ranking e brute_force_cointegration_screen.
+notebooks/05_h5_discovery_quality.py aggiornato (SIGMA_SOURCE_BY_LIST) per
+usare residual_std per cluster_coint/brute_force e continuare a usare
+spread_sigma per ggr_ssd/cluster_ssd (gia' coerente, invariato). Test
+sintetico aggiunto (coppia cointegrata nota, P2=P1*exp(u_t), u AR(1)
+phi=0.9): residual_std converge al valore teorico stazionario
+innovation_std/sqrt(1-phi^2) su un campione grande (n=5000, tolleranza
++-15%, necessaria per lasciare convergere la superconsistency della
+regressione di cointegrazione).
+
+**Verifica esplicita (non solo assunta):** il test di stazionarieta' OOS
+(% OOS-stationary) e la half-life OOS sono confermati indipendenti dalla
+scala del sigma - entrambi derivano esclusivamente dalla regressione
+Engle-Granger ricalcolata sul trading period stesso (p-value di
+statsmodels, coefficiente AR(1) del residuo), nessun sigma esterno vi
+entra mai. Verificato con un controllo programmatico
+(_verify_stationarity_and_half_life_unchanged) che confronta pre-fix e
+post-fix campo per campo su tutte e 4 le liste: identici byte-per-byte.
+
+**Impatto quantificato (8 run campionati, 7 riusciti):** ggr_ssd/cluster_ssd
+invariati (come atteso, sigma_source non cambiato). cluster_coint: %
+convergenza 21.6% -> 35.3% (+13.7 punti), rendimento medio mensile
+-0.0437% -> -0.2022% (t da -0.26 a -0.80, resta non significativo).
+brute_force: invariato a 0.0%/n/a - le uniche 7 coppie candidate (su 2
+run su 7 con survivor BH+filtro) non attraversano la soglia nemmeno con
+il sigma corretto (verificato caso per caso, es. GLW-MCO: range di
+spread nel trading period [-0.27, +0.20], soglia post-fix 0.385 - vicina
+ma non superata).
+
+**Decisione:** notebooks/05_h5_discovery_quality.py ri-eseguito una
+seconda volta dopo il fix, esplicitamente loggato come tale (non un
+rilancio silenzioso): numeri prima/dopo entrambi visibili in
+results/replication/h5_discovery_quality.md ("Second execution" section)
+e h5_discovery_quality.json (chiavi "pre_fix"/"post_fix",
+"scale_independence_check"). Nessun altro gate o risultato gia'
+pubblicato (Gate 1, Gate 2, README) e' toccato da questo fix.
