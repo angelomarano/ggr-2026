@@ -218,3 +218,55 @@ results/replication/h5_discovery_quality.md ("Second execution" section)
 e h5_discovery_quality.json (chiavi "pre_fix"/"post_fix",
 "scale_independence_check"). Nessun altro gate o risultato gia'
 pubblicato (Gate 1, Gate 2, README) e' toccato da questo fix.
+
+## 2026-07-14 — PROTOCOL.md §5: implementata la griglia dei costi di transazione, richiesta una rigenerazione dei trade log
+
+**Contesto:** PROTOCOL.md §5 (Livello 2, griglia di costo per round-trip)
+non era mai stato implementato. gate1_results.json/gate2_results.json non
+persistevano i trade log a livello di singola coppia (solo trade_stats
+aggregate via src/diagnostics.trade_statistics) - dato necessario per
+applicare 4c per round-trip completato, come richiesto dal protocollo.
+
+**Rigenerazione (notebooks/06_regenerate_trade_logs.py):** motore di
+trading ri-eseguito a PARITA' di input (stesse finestre formation/trading
+gia' frozen, stessi ticker, stesso sigma, nessun parametro nuovo),
+limitatamente al portafoglio primario (top_20/wait_one_day) su Gate 1
+(golden set, 2003-2009) e Gate 2 (full_universe e golden_set_robustness,
+2010-2026), stavolta persistendo anche il trade log completo per coppia
+(eventi open/close, daily_payoff) in results/replication/trade_log_gate1.json
+e results/frozen/trade_log_gate2.json.
+
+**Controllo di integrita' (obbligatorio prima di procedere, eseguito
+dentro lo stesso script):** ogni statistica aggregata gia' pubblicata
+(mean_monthly, se_nw, t_stat_nw, annualized_sharpe, pct_negative_months,
+max_drawdown, n_months, trade_stats) per top_20/wait_one_day, capitale
+committed ED employed, confrontata tra la rigenerazione e i valori gia'
+in gate1_results.json/gate2_results.json (entrambi i bracci). Risultato:
+**identico entro tolleranza 1e-9 relativa su ogni campo, per tutte e 3 le
+finestre** - nessuna divergenza, la rigenerazione e' verificata a parita'
+di input, nessun numero gia' pubblicato risulta alterato o discutibile.
+
+**Implementazione costi (src/costs.py, nuovo modulo - non appesantisce
+src/returns.py, §5 e' una sezione di protocollo distinta da §2.2):
+apply_round_trip_cost sottrae 4c dal daily_payoff di una coppia sul
+giorno di chiusura di ogni round-trip completato (qualunque motivo:
+crossing, delisting, end_of_period contano tutti come round-trip completo
+a 4 trade); applicato in aggregazione, src/trading.py invariato. Griglia
+c = config.COST_GRID_BP_PER_SIDE = (0, 5, 10, 20, 40) bp, gia' esistente
+in config.py, riusata cosi' com'e'.
+
+**Risultati (notebooks/07_cost_grid.py, results/replication/cost_curve.json):**
+cross-check automatico c=0bp contro il Livello 1 (wait-one-day lordo)
+gia' pubblicato: coincide esattamente su tutte e 3 le finestre (conferma
+indipendente che l'applicazione del costo e la ricostruzione da trade log
+sono corrette). Break-even c*: Gate 1 = 16.8 bp/lato, Gate 2 full_universe
+= 5.9 bp/lato, Gate 2 golden_set_robustness = 6.7 bp/lato (interpolazione
+lineare tra i punti della griglia adiacenti al cambio di segno, nessuna
+estrapolazione forzata). Short costs (borrow +25bp/anno) NON modellati
+quantitativamente, dichiarati come limite testuale nel report, come
+richiesto dal protocollo stesso.
+
+**Decisione:** nessun numero gia' pubblicato (Gate 1, Gate 2, H5, README)
+e' toccato da questo lavoro - la rigenerazione dei trade log e' additiva
+(nuovo dato persistito, stesso risultato) e verificata identica entro
+rumore macchina prima di essere usata per qualunque calcolo nuovo.

@@ -1,0 +1,197 @@
+{
+  "gate1": {
+    "cost_grid_bp": [
+      0,
+      5,
+      10,
+      20,
+      40
+    ],
+    "stats_by_cost_bp": {
+      "0": {
+        "mean_monthly": 0.0014842597563738016,
+        "t_stat_nw": 1.5038227310004546,
+        "annualized_sharpe": 0.5162701331950744,
+        "n_months": 77
+      },
+      "5": {
+        "mean_monthly": 0.001042979895488416,
+        "t_stat_nw": 1.0709622375093895,
+        "annualized_sharpe": 0.3647136648327352,
+        "n_months": 77
+      },
+      "10": {
+        "mean_monthly": 0.000601810657133477,
+        "t_stat_nw": 0.6253583656798877,
+        "annualized_sharpe": 0.21146071189100243,
+        "n_months": 77
+      },
+      "20": {
+        "mean_monthly": -0.00028019607111764847,
+        "t_stat_nw": -0.2967268353698519,
+        "annualized_sharpe": -0.09925413171771079,
+        "n_months": 77
+      },
+      "40": {
+        "mean_monthly": -0.002042883367312119,
+        "t_stat_nw": -2.1983184377072313,
+        "annualized_sharpe": -0.7307048969944644,
+        "n_months": 77
+      }
+    },
+    "breakeven": {
+      "c_star_bp": 16.823198030776574,
+      "note": "linearly interpolated between grid points c=10bp (mean=0.000602) and c=20bp (mean=-0.000280), where the sign change occurs."
+    },
+    "level0_same_day_gross_reference": {
+      "mean_monthly": 0.0012762491569926768,
+      "se_nw": 0.0009655633410017875,
+      "t_stat_nw": 1.3217663749211397,
+      "p_value_nw": 0.1862459584823799,
+      "annualized_sharpe": 0.4506444447553249,
+      "pct_negative_months": 0.45454545454545453,
+      "max_drawdown": -0.0813463388898561,
+      "n_months": 77
+    },
+    "level1_wait_one_day_gross_reference": {
+      "mean_monthly": 0.0014842597563738016,
+      "se_nw": 0.0009869911697546704,
+      "t_stat_nw": 1.5038227310004546,
+      "p_value_nw": 0.13262701667819718,
+      "annualized_sharpe": 0.5162701331950744,
+      "pct_negative_months": 0.42857142857142855,
+      "max_drawdown": -0.07749651555666837,
+      "n_months": 77
+    }
+  },
+  "gate2_full_universe": {
+    "cost_grid_bp": [
+      0,
+      5,
+      10,
+      20,
+      40
+    ],
+    "stats_by_cost_bp": {
+      "0": {
+        "mean_monthly": 0.0004246975599488733,
+        "t_stat_nw": 1.0552267683876333,
+        "annualized_sharpe": 0.25807799226631944,
+        "n_months": 198
+      },
+      "5": {
+        "mean_monthly": 6.46370420766814e-05,
+        "t_stat_nw": 0.1622314682535223,
+        "annualized_sharpe": 0.03936395015176272,
+        "n_months": 198
+      },
+      "10": {
+        "mean_monthly": -0.00029535270396837695,
+        "t_stat_nw": -0.7480987983077201,
+        "annualized_sharpe": -0.18012925175088615,
+        "n_months": 198
+      },
+      "20": {
+        "mean_monthly": -0.001015119956464394,
+        "t_stat_nw": -2.61034653198647,
+        "annualized_sharpe": -0.6195048039765264,
+        "n_months": 198
+      },
+      "40": {
+        "mean_monthly": -0.0024538060339894,
+        "t_stat_nw": -6.414199616029675,
+        "annualized_sharpe": -1.4862221936907718,
+        "n_months": 198
+      }
+    },
+    "breakeven": {
+      "c_star_bp": 5.897762266658994,
+      "note": "linearly interpolated between grid points c=5bp (mean=0.000065) and c=10bp (mean=-0.000295), where the sign change occurs."
+    },
+    "level0_same_day_gross_reference": {
+      "mean_monthly": 0.0005681041668498883,
+      "se_nw": 0.0004266597270343035,
+      "t_stat_nw": 1.3315157978437762,
+      "p_value_nw": 0.18301935036508166,
+      "annualized_sharpe": 0.3321041045363648,
+      "pct_negative_months": 0.4393939393939394,
+      "max_drawdown": -0.05855408079258684,
+      "n_months": 198
+    },
+    "level1_wait_one_day_gross_reference": {
+      "mean_monthly": 0.0004246975599488733,
+      "se_nw": 0.0004024704193183075,
+      "t_stat_nw": 1.0552267683876333,
+      "p_value_nw": 0.2913216243739274,
+      "annualized_sharpe": 0.25807799226631944,
+      "pct_negative_months": 0.4696969696969697,
+      "max_drawdown": -0.05199956732220523,
+      "n_months": 198
+    }
+  },
+  "gate2_golden_set_robustness": {
+    "cost_grid_bp": [
+      0,
+      5,
+      10,
+      20,
+      40
+    ],
+    "stats_by_cost_bp": {
+      "0": {
+        "mean_monthly": 0.0004937801895509016,
+        "t_stat_nw": 1.1180925627350653,
+        "annualized_sharpe": 0.2630301932397642,
+        "n_months": 198
+      },
+      "5": {
+        "mean_monthly": 0.00012705254407433485,
+        "t_stat_nw": 0.2911190991162459,
+        "annualized_sharpe": 0.06783771154476366,
+        "n_months": 198
+      },
+      "10": {
+        "mean_monthly": -0.0002395992702221248,
+        "t_stat_nw": -0.5550667294909475,
+        "annualized_sharpe": -0.1281496518458844,
+        "n_months": 198
+      },
+      "20": {
+        "mean_monthly": -0.0009726755008378355,
+        "t_stat_nw": -2.29695746659444,
+        "annualized_sharpe": -0.5210312727837375,
+        "n_months": 198
+      },
+      "40": {
+        "mean_monthly": -0.002437919038505135,
+        "t_stat_nw": -5.906268912881213,
+        "annualized_sharpe": -1.2999905103487142,
+        "n_months": 198
+      }
+    },
+    "breakeven": {
+      "c_star_bp": 6.732604873620035,
+      "note": "linearly interpolated between grid points c=5bp (mean=0.000127) and c=10bp (mean=-0.000240), where the sign change occurs."
+    },
+    "level0_same_day_gross_reference": {
+      "mean_monthly": 0.0005692225012258032,
+      "se_nw": 0.0004572767689863394,
+      "t_stat_nw": 1.2448095766763259,
+      "p_value_nw": 0.21320175506912165,
+      "annualized_sharpe": 0.2944453803691485,
+      "pct_negative_months": 0.45454545454545453,
+      "max_drawdown": -0.06032125955100909,
+      "n_months": 198
+    },
+    "level1_wait_one_day_gross_reference": {
+      "mean_monthly": 0.0004937801895509016,
+      "se_nw": 0.00044162729098476617,
+      "t_stat_nw": 1.1180925627350653,
+      "p_value_nw": 0.2635274625101801,
+      "annualized_sharpe": 0.2630301932397642,
+      "pct_negative_months": 0.46464646464646464,
+      "max_drawdown": -0.0553662794376123,
+      "n_months": 198
+    }
+  }
+}
