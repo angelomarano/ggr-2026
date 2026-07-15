@@ -1,5 +1,7 @@
 # Pairs trading, twenty years later
 
+Angelo Marano — BSc Statistics, incoming MSc Statistics @ ETH Zurich
+
 A frozen replication of Gatev, Goetzmann & Rouwenhorst's 2006 paper, "Pairs
 Trading: Performance of a Relative-Value Arbitrage Rule" (GGR), extended
 out-of-sample to 2010–2026, plus a data-quality audit trail that turned out
@@ -116,6 +118,30 @@ publishable (`PROTOCOL.md` §4/H1).
 Gate 2 (full universe) concatenated. Red shading = VIX≥25 months, orange =
 the two declared event windows, gray gap = the untested ~6 months between
 the two frozen windows (mid-2009 to end-2009).*
+
+**Transaction costs reinforce the same conclusion, independently.**
+PROTOCOL.md §5's cost grid (0–40 bp/side, 4 trades per round-trip, applied
+to the actual per-pair trade logs — `results/replication/cost_curve.md`)
+pushes the primary portfolio's mean monthly return to break-even at:
+
+| window | break-even c* |
+|---|---|
+| Gate 1 (2003–2009) | 16.8 bp/side |
+| Gate 2, full universe (2010–2026) | 5.9 bp/side |
+| Gate 2, golden set robustness (2010–2026) | 6.7 bp/side |
+
+Effective bid-ask spreads for liquid large-cap S&P 500 names in the
+post-decimalization era are typically cited in the 1–5 bp/side range.
+Break-even costs of 5.9–6.7 bp/side (OOS) sit right at the edge of that
+range — the OOS strategy's cost cushion is thin, not comfortable. Gate 1's
+break-even (16.8 bp/side) has more room.
+
+![Return and Sharpe vs transaction cost](results/figures/fig4_cost_curve.png)
+
+*Figure 4: mean monthly return (left) and annualized Sharpe (right) vs.
+explicit round-trip cost, top-20/wait-one-day/committed, all three frozen
+windows. Dashed lines mark same-day gross (Level 0), reused from Gate 1/
+Gate 2, not recomputed.*
 
 ### H2: did the turbulence exception hold?
 
@@ -293,24 +319,67 @@ low-spread mega-caps, though this explains the *direction* and not the
 full *magnitude* of the divergence. It stays as an open, dated item in
 `DEVIATIONS.md`; nothing here has been forced to a tidy conclusion.
 
+### Trade-log regeneration for the cost analysis: verified, not just re-run
+
+`gate1_results.json`/`gate2_results.json` never persisted individual trade
+logs, only aggregated statistics — needed to apply PROTOCOL.md §5's
+per-round-trip cost model. `notebooks/06_regenerate_trade_logs.py` re-runs
+the primary portfolio (top-20/wait-one-day) at parity of input (same
+windows, universes, sigma) and checks every already-published statistic
+against the original run before writing anything: all matched within a
+1e-9 relative tolerance, for both capital measures, on Gate 1 and both
+Gate 2 arms. Full writeup: `DEVIATIONS.md`, 2026-07-14 entry.
+
 ---
 
-## Extensions in progress
+## H5 — clustering-based pair selection
 
-**H5: does clustering-based pair selection improve discovery quality?**
-Planned per `PROTOCOL.md` §4/H5, **not yet implemented** (no
-`src/selection_cluster.py` exists in this repository yet; this section
-describes a design, not shipped code). The plan: PCA (10 components) on
-standardized formation-period returns, clustering primarily via OPTICS
-(`min_samples=3`, ξ=0.05, with a k-means/silhouette fallback), candidate
-pairs restricted to intra-cluster, compared against a brute-force
-Engle-Granger cointegration screen across all ~125,000 candidate pairs
-with Benjamini-Hochberg (and Benjamini-Yekutieli, for arbitrary dependence)
-multiple-testing correction. The intended message here is about discovery
-quality, not raw performance: "clustering finds fewer false discoveries at
-the same performance" is the goal, not "clustering makes more money."
-Discovery quality (OOS spread stationarity, convergence rate) is the
-primary comparison metric.
+PROTOCOL.md §4/H5's alternative pipeline (`src/selection_cluster.py`): PCA
+(10 components) on standardized formation-period returns, OPTICS
+clustering (`min_samples=3`, ξ=0.05, with a k-means/silhouette fallback if
+OPTICS degenerates), candidate pairs restricted to intra-cluster only,
+ranked two ways — SSD (Variant A) and Engle-Granger cointegration
+(Variant B) — and compared against a brute-force Engle-Granger screen over
+every pair in the formation universe, with Benjamini-Hochberg/Yekutieli
+multiple-testing correction. Evaluated on 8 runs sampled (evenly spaced)
+from the replication window; see the sample-size note below before
+reading anything here as more than a first pass.
+
+**Search-space reduction is the most solid result.** Across the 8 sampled
+runs, clustering restricts the candidate pool from 266,822 possible pairs
+to 1,396 intra-cluster pairs actually tested — a **191×** reduction
+(0.52%), before any cointegration test is even run.
+
+**Discovery quality is a mixed picture, not a clean win for clustering:**
+
+| list | % OOS-stationary | % converged ≥1x | mean half-life OOS |
+|---|---|---|---|
+| GGR-SSD (baseline) | 12.1% | 52.1% | 74.6 days |
+| Cluster+SSD (Variant A) | 12.9% | 33.6% | 13.9 days |
+| Cluster+Cointegration (Variant B) | **16.7%** | 35.3% | 14.0 days |
+| Brute-force+BH (comparator) | 14.3% | 0.0% | 6.3 days |
+
+Cluster+Cointegration has the highest share of pairs whose spread is
+stationary out-of-sample (16.7% vs. 12.1% for the GGR-SSD baseline), but a
+lower convergence rate (35.3% vs. 52.1%). Neither metric moves cleanly in
+clustering's favor; both are reported as computed, not smoothed into a
+single verdict. Full per-run breakdown: `results/replication/h5_discovery_quality.md`.
+
+**The brute-force comparator's own result is a power problem, and that's
+itself informative.** After Benjamini-Hochberg correction on roughly
+33,000–47,000 tests per run, only **7 pairs survive across all 8 sampled
+runs combined** — far too few to draw a statistical conclusion from
+directly, but a concrete illustration of exactly the premise PROTOCOL.md
+§4/H5 states: an honest multiple-testing correction over a huge test
+space leaves almost nothing standing, which is the argument for
+pre-filtering via clustering in the first place.
+
+**Sample size:** 8 of the 71 available runs in the replication window
+(evenly spaced across the full 72-month window; one of the 8, 2003-01,
+hits the same data-boundary failure already documented for Gate 1,
+leaving 7 runs actually used). Extending to the full run sample and to
+the 2010–2026 OOS window is a possible next step — not yet done, and not
+currently scheduled.
 
 ---
 
@@ -339,6 +408,20 @@ python notebooks/03_gate2_frozen_run.py   # do not re-run without a documented r
 Figures for this README:
 ```bash
 python notebooks/04_readme_figures.py      # results/figures/fig1-3
+```
+
+H5 discovery-quality comparison (8 sampled runs, see the H5 section above):
+```bash
+python notebooks/05_h5_discovery_quality.py
+```
+
+Trade-log regeneration and the transaction-cost grid (PROTOCOL.md §5):
+```bash
+python notebooks/06_regenerate_trade_logs.py   # re-run at parity of input (same windows/universe/sigma) --
+                                                # not a new experiment, same principle as data.golden_set's
+                                                # parametrized rebuild; verifies every already-published
+                                                # statistic before writing anything
+python notebooks/07_cost_grid.py               # reads the trade logs above, no re-run of the trading engine
 ```
 
 Tests:
