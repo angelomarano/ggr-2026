@@ -1,44 +1,44 @@
 # DEVIATIONS.md
-Log delle deviazioni dal protocollo (PROTOCOL.md v1.0, ratificato 2026-07-05).
-Formato: data | sezione | deviazione | motivazione.
+Log of deviations from the protocol (PROTOCOL.md v1.0, ratified 2026-07-05).
+Format: date | section | deviation | rationale.
 
-*(vuoto — nessuna deviazione)*
+*(empty — no deviations)*
 
-## 2026-07-05 — Gate 0: attrition Yahoo molto oltre le attese, clausola 2003→2005 inefficace
+## 2026-07-05 — Gate 0: Yahoo attrition far beyond expectations, the 2003→2005 clause is ineffective
 
-**Osservato:** attrition sull'universo point-in-time pieno: 51.9% (2003) → 63.7% (2009)
-→ 96.8% (2025). La clausola del protocollo ("se <70% nel 2003-2009, spostare a
-2005") non risolve nulla: anche il 2005 e' al 54.9%.
+**Observed:** attrition on the full point-in-time universe: 51.9% (2003) → 63.7% (2009)
+→ 96.8% (2025). The protocol's clause ("if <70% in 2003-2009, shift to
+2005") solves nothing: even 2005 sits at 54.9%.
 
-**Causa accertata:** Yahoo Finance non tronca lo storico dei titoli delistati
-al giorno del delisting — lo ELIMINA INTERAMENTE, anche per titoli come X
-(US Steel) rimasti quotati fino al 2025. L'attrition per anno riflette quindi
-quanti membri di quell'anno sono stati delistati DA ALLORA A OGGI (2026), non
-la qualita' dei dati dell'epoca. E' un limite del vendor gratuito, documentato
-in letteratura (dataset gratuiti generalmente privi di "titoli morti"), non
-un errore della pipeline.
+**Established cause:** Yahoo Finance does not truncate a delisted stock's history
+at the delisting date — it ELIMINATES IT ENTIRELY, even for stocks like X
+(US Steel) that stayed listed until 2025. Attrition by year therefore reflects
+how many members of that year's index have been delisted FROM THEN UNTIL NOW
+(2026), not the data quality of the period itself. This is a limitation of the
+free vendor, documented in the literature (free datasets generally lack "dead
+stocks"), not a pipeline error.
 
-**Mitigazioni testate e scartate:**
-- Stooq come fonte alternativa: richieste bloccate anche su un controllo
-  sicuro (AAPL) -> probabile protezione anti-scraping. Time-boxed e abbandonato,
-  nessuna evidenza ne' a favore ne' contro la copertura dei delistati.
-- WRDS/CRSP: nessuna conferma di accesso ETH Zurich (UZH e HSG ce l'hanno,
-  ETH non verificato). Rimandato a settembre 2026, quando Angelo avra'
-  credenziali ETH per controllare il catalogo library.ethz.ch. Non blocca
-  il progetto attuale.
+**Mitigations tested and discarded:**
+- Stooq as an alternative source: requests blocked even on a safe control
+  (AAPL) -> likely anti-scraping protection. Time-boxed and abandoned,
+  no evidence either for or against coverage of delisted names.
+- WRDS/CRSP: no confirmed ETH Zurich access (UZH and HSG have it,
+  ETH unverified). Deferred to September 2026, when Angelo will have
+  ETH credentials to check the library.ethz.ch catalog. Does not block
+  the current project.
 
-**Decisione (ratificata):** Gate 0 originale (soglia 70% sull'universo pieno)
-SOSTITUITO da Gate 0-bis a due componenti:
-  (a) fedelta' meccanica del motore -> validata su un GOLDEN SET (vedi
-      data/golden_set.py): titoli con storico Yahoo integro in OGNI run
-      2003-01..2008-12, costruito empiricamente dal cache gia' scaricato.
-  (b) quantificazione del survivorship bias -> resta sull'universo pieno,
-      riportata come limite/robustness (curva di attrition per anno), non
-      piu' come cancello bloccante. H1-H5 girano su universo pieno come
-      primario e su golden-set-only come robustness check esplicito.
+**Decision (ratified):** the original Gate 0 (70% threshold on the full universe)
+REPLACED by a two-component Gate 0-bis:
+  (a) mechanical fidelity of the engine -> validated on a GOLDEN SET (see
+      data/golden_set.py): stocks with an intact Yahoo history in EVERY run
+      2003-01..2008-12, built empirically from the cache already downloaded.
+  (b) quantification of survivorship bias -> stays on the full universe,
+      reported as a limitation/robustness check (attrition curve by year), no
+      longer as a blocking gate. H1-H5 run on the full universe as the
+      primary basis and on golden-set-only as an explicit robustness check.
 
-Protocollo (PROTOCOL.md) da aggiornare di conseguenza in §1.3 e §3 alla
-prossima revisione; questa voce e' il log della decisione nel frattempo.
+PROTOCOL.md to be updated accordingly in §1.3 and §3 at the next revision;
+this entry is the log of the decision in the meantime.
 
 ## 2026-07-05 — Gate 1: two qualitative invariants violated, cause identified (not a bug)
 
@@ -80,193 +80,188 @@ just the golden set) as an explicit robustness check, since the
 survive-every-run constraint is specific to the golden set and may not
 reproduce elsewhere.
 
-## 2026-07-05 — Gate 2: ticker con dati Yahoo corrotti (rendimenti estremi e prezzi congelati), due filtri causali aggiunti
+## 2026-07-05 — Gate 2: tickers with corrupted Yahoo data (extreme returns and frozen prices), two causal filters added
 
-**Scoperta:** durante l'esecuzione one-shot di Gate 2 (universo pieno, 2010-2025),
-il bootstrap decile-matched del portafoglio primario ha prodotto numeri
-astronomicamente assurdi (media delle repliche dell'ordine di 10^18%). Un'indagine
-sui dati grezzi ha trovato 25 ticker con rendimenti giornalieri superiori al 300%
-in valore assoluto in almeno un giorno tra il 2009 e il 2026 (TNB, KRI, CBE, TIE,
-NCC, BOL, CFC, MEE, CIN, PBG, BMC, CPWR, HPC, GLK, GDW, PTV, STI, UVN, HET, FSH,
-EP, UPC, EQ, MI, PALM), quasi certamente per riciclo del simbolo ticker (una
-societa' delistata il cui ticker viene riassegnato a un'altra entita', spesso
-OTC/penny-stock, senza distinzione nella serie storica di Yahoo Finance).
+**Discovery:** during Gate 2's one-shot execution (full universe, 2010-2025),
+the primary portfolio's decile-matched bootstrap produced astronomically absurd
+numbers (replicate means on the order of 10^18%). An investigation of the raw
+data found 25 tickers with daily returns exceeding 300% in absolute value on
+at least one day between 2009 and 2026 (TNB, KRI, CBE, TIE, NCC, BOL, CFC, MEE,
+CIN, PBG, BMC, CPWR, HPC, GLK, GDW, PTV, STI, UVN, HET, FSH, EP, UPC, EQ, MI,
+PALM), almost certainly due to ticker-symbol recycling (a delisted company
+whose ticker is reassigned to a different entity, often OTC/penny-stock, with
+no distinction in Yahoo Finance's historical series).
 
-**Impatto quantificato:**
-- 57/192 run OOS (universo pieno) hanno avuto almeno uno dei 25 ticker corrotti
-  sopravvivere al filtro di completezza formation preesistente (nessun NaN, quindi
-  non escluso dal filtro "no-trade day" gia' presente).
-- Contaminazione REALE confermata (non solo possibile sostituto casuale nel
-  bootstrap) in 5 coppie su 2 run: sempre e solo BMC (2014-01 control rank117:
-  BMC/BXP; 2014-04 top_20 rank10/17: BMC/MCD, BMC/BMS; 2014-04 control
+**Quantified impact:**
+- 57/192 OOS runs (full universe) had at least one of the 25 corrupted
+  tickers survive the pre-existing formation completeness filter (no NaN, so
+  not excluded by the already-present "no-trade day" filter).
+- REAL contamination confirmed (not just a possible random substitute in the
+  bootstrap) in 5 pairs across 2 runs: always and only BMC (2014-01 control
+  rank117: BMC/BXP; 2014-04 top_20 rank10/17: BMC/MCD, BMC/BMS; 2014-04 control
   rank112/118: BMC/KO, BMC/CNP).
-- Causa di questi 5 casi: NON un salto di rendimento estremo (le date esatte dei
-  rendimenti estremi di BMC non cadono in nessuna delle due finestre di formation
-  coinvolte), ma un prezzo Adj Close congelato (bit-identico) per mesi consecutivi
-  (es. $2380.0 esatto da agosto a ottobre 2013, con volume sospetto che oscilla
-  tra 2000 e 0) — un indice di prezzo normalizzato costante "combacia"
-  artificialmente con qualunque altro titolo a bassa volatilita', abbassando la
-  SSD in modo spurio.
-- Nessuno dei 25 ticker corrotti appartiene al golden set (ne' quello di replica
-  ne' quello OOS), tranne TIE che e' nel golden set di replica ma la cui finestra
-  di corruzione (2010-2017) e' interamente dopo la finestra di Gate 1 (2003-2009):
-  Gate 1 non e' contaminato.
+- Cause of these 5 cases: NOT an extreme-return jump (BMC's exact extreme-return
+  dates do not fall within either of the two formation windows involved), but a
+  frozen (bit-identical) Adj Close price for consecutive months (e.g. exactly
+  $2380.0 from August to October 2013, with suspicious volume oscillating
+  between 2000 and 0) — a constant normalized price index "matches" any other
+  low-volatility stock artificially, spuriously lowering the SSD.
+- None of the 25 corrupted tickers belong to the golden set (neither the
+  replication one nor the OOS one), except TIE, which is in the replication
+  golden set but whose corruption window (2010-2017) falls entirely after
+  Gate 1's window (2003-2009): Gate 1 is not contaminated.
 
-**Fix applicato (src/formation.py, config.py):** due filtri causali, applicati
-SOLO al formation period del run corrente (mai a dati futuri rispetto a quel run
-— stesso principio del filtro GGR gia' esistente su "giorno senza scambi"):
-1. `config.MAX_ABS_DAILY_RETURN` (default 3.0 = 300%): esclude un ticker se un
-   suo rendimento giornaliero nel formation period supera la soglia in valore
-   assoluto.
-2. `config.MAX_CONSECUTIVE_FROZEN_DAYS` (default 5): esclude un ticker se il suo
-   Adj Close resta bit-identico per piu' di N giorni di borsa consecutivi nel
-   formation period. Deliberatamente basato solo sul prezzo, non sul volume (il
-   volume di BMC e' esso stesso un segnale inaffidabile).
+**Fix applied (src/formation.py, config.py):** two causal filters, applied
+ONLY to the current run's formation period (never to data that is future
+relative to that run — the same principle as the already-existing GGR filter
+on "day without trades"):
+1. `config.MAX_ABS_DAILY_RETURN` (default 3.0 = 300%): excludes a ticker if
+   one of its daily returns in the formation period exceeds the threshold in
+   absolute value.
+2. `config.MAX_CONSECUTIVE_FROZEN_DAYS` (default 5): excludes a ticker if its
+   Adj Close stays bit-identical for more than N consecutive trading days in
+   the formation period. Deliberately based on price only, not volume (BMC's
+   own volume is itself an unreliable signal).
 
-Entrambi i parametri sono marcati esplicitamente in config.py come aggiunte
-POST-HOC, distinte dai parametri congelati dal protocollo originale
-(OPEN_TRIGGER_SIGMAS, FORMATION_DAYS, ecc.).
+Both parameters are explicitly marked in config.py as POST-HOC additions,
+distinct from the parameters frozen by the original protocol
+(OPEN_TRIGGER_SIGMAS, FORMATION_DAYS, etc.).
 
-**Verifica:** dopo il fix, tutti e 5 i casi di contaminazione reale sono risolti
-(BMC escluso in entrambi i run, sostituito da coppie SSD-legittime, nessun altro
-ticker corrotto entra al loro posto). Test sintetici aggiunti per entrambi i
-filtri, incluse verifiche esplicite di causalita' (nessun look-ahead: lo stesso
-ticker con la stessa anomalia e' escluso o meno a seconda che la specifica
-finestra di formation del run la contenga).
+**Verification:** after the fix, all 5 real-contamination cases are resolved
+(BMC excluded in both runs, replaced by SSD-legitimate pairs, no other
+corrupted ticker takes its place). Synthetic tests added for both filters,
+including explicit causality checks (no look-ahead: the same ticker with the
+same anomaly is excluded or not depending on whether the run's specific
+formation window contains it).
 
-**Nota — distinto dal problema Gate 0:** questo NON e' lo stesso problema gia'
-documentato per Gate 0 (Yahoo che elimina interamente lo storico dei titoli
-delistati). Stessa fonte dati (Yahoo Finance), due difetti diversi: Gate 0
-riguarda l'ASSENZA di dati per titoli delistati; questo riguarda dati PRESENTI
-ma corrotti (valori numericamente implausibili) per titoli il cui simbolo e'
-stato riciclato dopo il delisting originale.
+**Note — distinct from the Gate 0 issue:** this is NOT the same issue already
+documented for Gate 0 (Yahoo entirely deleting delisted stocks' history).
+Same data source (Yahoo Finance), two different defects: Gate 0 concerns the
+ABSENCE of data for delisted stocks; this one concerns data that IS PRESENT
+but corrupted (numerically implausible values) for stocks whose symbol was
+recycled after the original delisting.
 
-**Decisione:** Gate 2 (braccio full_universe) ri-eseguito una seconda volta dopo
-il fix, esplicitamente loggato come tale (non un rilancio silenzioso): numeri
-prima/dopo entrambi visibili in results/frozen/gate2_report.md e
-gate2_results.json (chiave "full_universe_before_fix"). Braccio
-golden_set_robustness non ri-eseguito: gia' verificato pulito, nessuno dei 25
-ticker corrotti vi appartiene.
+**Decision:** Gate 2 (full_universe arm) re-run a second time after the fix,
+explicitly logged as such (not a silent re-run): before/after numbers both
+visible in results/frozen/gate2_report.md and gate2_results.json (key
+"full_universe_before_fix"). golden_set_robustness arm not re-run: already
+verified clean, none of the 25 corrupted tickers belong to it.
 
-**Nota di conferma (verifica a posteriori, sola lettura):** la chiave
-"full_universe" attualmente in gate2_results.json - quella usata per TUTTE le
-tabelle di gate2_report.md e del README (statistiche descrittive a 12
-combinazioni, le tre falsificazioni, E ANCHE H2/H3/H4) - e' l'output della
-seconda esecuzione (post-fix), non un residuo della prima. Confermato
-confrontando valori noti per differire tra le due esecuzioni:
-b(HighVol) H2 = 0.31470% (t=2.143) in "full_universe" contro 0.31411%
-(t=2.139) in "full_universe_before_fix"; correlazione grezza media H3 =
-0.48245 contro 0.47850; delta H4 2010-2017 = 0.013890% contro 0.013993%.
-Le differenze sono piccole (coerenti con sole 2 run su 192 che cambiano
-selezione) ma non nulle: H2/H3/H4, non solo le descrittive e il bootstrap,
-sono state ricalcolate post-fix.
+**Confirmation note (post-hoc verification, read-only):** the "full_universe"
+key currently in gate2_results.json - the one used for ALL tables in
+gate2_report.md and the README (12-combination descriptive statistics, the
+three falsifications, AND ALSO H2/H3/H4) - is the output of the second
+execution (post-fix), not a leftover of the first. Confirmed by comparing
+values known to differ between the two executions: b(HighVol) H2 = 0.31470%
+(t=2.143) in "full_universe" vs. 0.31411% (t=2.139) in
+"full_universe_before_fix"; mean raw correlation H3 = 0.48245 vs. 0.47850;
+H4 delta 2010-2017 = 0.013890% vs. 0.013993%. The differences are small
+(consistent with only 2 of 192 runs changing selection) but nonzero: H2/H3/H4,
+not just the descriptive statistics and the bootstrap, were recomputed
+post-fix.
 
-## 2026-07-13 — H5: mismatch di scala nel sigma di trading per le coppie selezionate via Engle-Granger
+## 2026-07-13 — H5: scale mismatch in the trading sigma for pairs selected via Engle-Granger
 
-**Osservato:** in notebooks/05_h5_discovery_quality.py, il sigma passato a
-simulate_pair_wait_one_day (soglia di apertura |spread| > k*sigma) era
-formation.spread_sigma per TUTTE e quattro le liste candidate, incluse
-cluster_coint (Variante B) e brute_force - selezionate pero' via
-Engle-Granger sul RESIDUO del log-prezzo, non sull'indice di prezzo
-normalizzato. spread_sigma stima la deviazione standard di
-P*_i - P*_j (indice di prezzo normalizzato, la stessa quantita' che
-src/trading.py effettivamente soglia), quindi resta corretto per
-ggr_ssd/cluster_ssd; per cluster_coint/brute_force e' una stima presa da
-una quantita' diversa da quella su cui la coppia e' stata selezionata.
+**Observed:** in notebooks/05_h5_discovery_quality.py, the sigma passed to
+simulate_pair_wait_one_day (opening threshold |spread| > k*sigma) was
+formation.spread_sigma for ALL FOUR candidate lists, including cluster_coint
+(Variant B) and brute_force - which are however selected via Engle-Granger on
+the log-price RESIDUAL, not on the normalized price index. spread_sigma
+estimates the standard deviation of P*_i - P*_j (normalized price index, the
+same quantity src/trading.py actually thresholds), so it stays correct for
+ggr_ssd/cluster_ssd; for cluster_coint/brute_force it is an estimate taken
+from a different quantity than the one the pair was selected on.
 
-**Causa:** engle_granger_pair (src/selection_cluster.py) non esponeva la
-deviazione standard del proprio residuo - solo t_stat/p_value/half_life_days
-- quindi non c'era alcun valore alternativo da passare al motore di trading
-per le coppie selezionate via cointegrazione.
+**Cause:** engle_granger_pair (src/selection_cluster.py) did not expose its
+own residual's standard deviation - only t_stat/p_value/half_life_days -
+so there was no alternative value to pass to the trading engine for pairs
+selected via cointegration.
 
-**Fix:** aggiunto il campo "residual_std" (resid.std(ddof=0), nessuna
-regressione aggiuntiva - il residuo esiste gia' nella funzione) al dict di
-ritorno di engle_granger_pair, esposto come colonna nelle tabelle di
-cointegration_intra_cluster_ranking e brute_force_cointegration_screen.
-notebooks/05_h5_discovery_quality.py aggiornato (SIGMA_SOURCE_BY_LIST) per
-usare residual_std per cluster_coint/brute_force e continuare a usare
-spread_sigma per ggr_ssd/cluster_ssd (gia' coerente, invariato). Test
-sintetico aggiunto (coppia cointegrata nota, P2=P1*exp(u_t), u AR(1)
-phi=0.9): residual_std converge al valore teorico stazionario
-innovation_std/sqrt(1-phi^2) su un campione grande (n=5000, tolleranza
-+-15%, necessaria per lasciare convergere la superconsistency della
-regressione di cointegrazione).
+**Fix:** added the "residual_std" field (resid.std(ddof=0), no additional
+regression - the residual already exists inside the function) to
+engle_granger_pair's return dict, exposed as a column in the
+cointegration_intra_cluster_ranking and brute_force_cointegration_screen
+tables. notebooks/05_h5_discovery_quality.py updated (SIGMA_SOURCE_BY_LIST)
+to use residual_std for cluster_coint/brute_force and to keep using
+spread_sigma for ggr_ssd/cluster_ssd (already consistent, unchanged).
+Synthetic test added (known cointegrated pair, P2=P1*exp(u_t), u AR(1)
+phi=0.9): residual_std converges to the theoretical stationary value
+innovation_std/sqrt(1-phi^2) on a large sample (n=5000, +-15% tolerance,
+needed to let the cointegrating regression's superconsistency converge).
 
-**Verifica esplicita (non solo assunta):** il test di stazionarieta' OOS
-(% OOS-stationary) e la half-life OOS sono confermati indipendenti dalla
-scala del sigma - entrambi derivano esclusivamente dalla regressione
-Engle-Granger ricalcolata sul trading period stesso (p-value di
-statsmodels, coefficiente AR(1) del residuo), nessun sigma esterno vi
-entra mai. Verificato con un controllo programmatico
-(_verify_stationarity_and_half_life_unchanged) che confronta pre-fix e
-post-fix campo per campo su tutte e 4 le liste: identici byte-per-byte.
+**Explicit verification (not just assumed):** the OOS stationarity test
+(% OOS-stationary) and the OOS half-life are confirmed independent of the
+sigma scale - both come exclusively from the Engle-Granger regression
+recomputed on the trading period itself (statsmodels' p-value, the
+residual's AR(1) coefficient), no external sigma ever enters. Verified with
+a programmatic check (_verify_stationarity_and_half_life_unchanged) that
+compares pre-fix and post-fix field by field across all 4 lists: identical
+byte-for-byte.
 
-**Impatto quantificato (8 run campionati, 7 riusciti):** ggr_ssd/cluster_ssd
-invariati (come atteso, sigma_source non cambiato). cluster_coint: %
-convergenza 21.6% -> 35.3% (+13.7 punti), rendimento medio mensile
--0.0437% -> -0.2022% (t da -0.26 a -0.80, resta non significativo).
-brute_force: invariato a 0.0%/n/a - le uniche 7 coppie candidate (su 2
-run su 7 con survivor BH+filtro) non attraversano la soglia nemmeno con
-il sigma corretto (verificato caso per caso, es. GLW-MCO: range di
-spread nel trading period [-0.27, +0.20], soglia post-fix 0.385 - vicina
-ma non superata).
+**Quantified impact (8 sampled runs, 7 succeeded):** ggr_ssd/cluster_ssd
+unchanged (as expected, sigma_source not changed). cluster_coint: %
+convergence 21.6% -> 35.3% (+13.7 points), mean monthly return -0.0437% ->
+-0.2022% (t from -0.26 to -0.80, still not significant). brute_force:
+unchanged at 0.0%/n/a - the only 7 candidate pairs (across 2 of 7 runs with
+a BH+filter survivor) don't cross the threshold even with the corrected
+sigma (verified case by case, e.g. GLW-MCO: trading-period spread range
+[-0.27, +0.20], post-fix threshold 0.385 - close but not exceeded).
 
-**Decisione:** notebooks/05_h5_discovery_quality.py ri-eseguito una
-seconda volta dopo il fix, esplicitamente loggato come tale (non un
-rilancio silenzioso): numeri prima/dopo entrambi visibili in
-results/replication/h5_discovery_quality.md ("Second execution" section)
-e h5_discovery_quality.json (chiavi "pre_fix"/"post_fix",
-"scale_independence_check"). Nessun altro gate o risultato gia'
-pubblicato (Gate 1, Gate 2, README) e' toccato da questo fix.
+**Decision:** notebooks/05_h5_discovery_quality.py re-run a second time after
+the fix, explicitly logged as such (not a silent re-run): before/after
+numbers both visible in results/replication/h5_discovery_quality.md
+("Second execution" section) and h5_discovery_quality.json (keys
+"pre_fix"/"post_fix", "scale_independence_check"). No other already-published
+gate or result (Gate 1, Gate 2, README) is touched by this fix.
 
-## 2026-07-14 — PROTOCOL.md §5: implementata la griglia dei costi di transazione, richiesta una rigenerazione dei trade log
+## 2026-07-14 — PROTOCOL.md §5: implemented the transaction-cost grid, required a trade-log regeneration
 
-**Contesto:** PROTOCOL.md §5 (Livello 2, griglia di costo per round-trip)
-non era mai stato implementato. gate1_results.json/gate2_results.json non
-persistevano i trade log a livello di singola coppia (solo trade_stats
-aggregate via src/diagnostics.trade_statistics) - dato necessario per
-applicare 4c per round-trip completato, come richiesto dal protocollo.
+**Context:** PROTOCOL.md §5 (Level 2, per-round-trip cost grid) had never
+been implemented. gate1_results.json/gate2_results.json did not persist
+trade logs at the individual-pair level (only aggregated trade_stats via
+src/diagnostics.trade_statistics) - data needed to apply 4c per completed
+round-trip, as the protocol requires.
 
-**Rigenerazione (notebooks/06_regenerate_trade_logs.py):** motore di
-trading ri-eseguito a PARITA' di input (stesse finestre formation/trading
-gia' frozen, stessi ticker, stesso sigma, nessun parametro nuovo),
-limitatamente al portafoglio primario (top_20/wait_one_day) su Gate 1
-(golden set, 2003-2009) e Gate 2 (full_universe e golden_set_robustness,
-2010-2026), stavolta persistendo anche il trade log completo per coppia
-(eventi open/close, daily_payoff) in results/replication/trade_log_gate1.json
-e results/frozen/trade_log_gate2.json.
+**Regeneration (notebooks/06_regenerate_trade_logs.py):** trading engine
+re-run at INPUT PARITY (same already-frozen formation/trading windows, same
+tickers, same sigma, no new parameter), restricted to the primary portfolio
+(top_20/wait_one_day) on Gate 1 (golden set, 2003-2009) and Gate 2
+(full_universe and golden_set_robustness, 2010-2026), this time also
+persisting the full per-pair trade log (open/close events, daily_payoff) in
+results/replication/trade_log_gate1.json and
+results/frozen/trade_log_gate2.json.
 
-**Controllo di integrita' (obbligatorio prima di procedere, eseguito
-dentro lo stesso script):** ogni statistica aggregata gia' pubblicata
-(mean_monthly, se_nw, t_stat_nw, annualized_sharpe, pct_negative_months,
-max_drawdown, n_months, trade_stats) per top_20/wait_one_day, capitale
-committed ED employed, confrontata tra la rigenerazione e i valori gia'
-in gate1_results.json/gate2_results.json (entrambi i bracci). Risultato:
-**identico entro tolleranza 1e-9 relativa su ogni campo, per tutte e 3 le
-finestre** - nessuna divergenza, la rigenerazione e' verificata a parita'
-di input, nessun numero gia' pubblicato risulta alterato o discutibile.
+**Integrity check (mandatory before proceeding, run inside the same
+script):** every already-published aggregate statistic (mean_monthly, se_nw,
+t_stat_nw, annualized_sharpe, pct_negative_months, max_drawdown, n_months,
+trade_stats) for top_20/wait_one_day, BOTH committed and employed capital,
+compared between the regeneration and the values already in
+gate1_results.json/gate2_results.json (both arms). Result: **identical
+within a 1e-9 relative tolerance on every field, for all 3 windows** - no
+divergence, the regeneration is verified to be at input parity, no
+already-published number is altered or in question.
 
-**Implementazione costi (src/costs.py, nuovo modulo - non appesantisce
-src/returns.py, §5 e' una sezione di protocollo distinta da §2.2):
-apply_round_trip_cost sottrae 4c dal daily_payoff di una coppia sul
-giorno di chiusura di ogni round-trip completato (qualunque motivo:
-crossing, delisting, end_of_period contano tutti come round-trip completo
-a 4 trade); applicato in aggregazione, src/trading.py invariato. Griglia
-c = config.COST_GRID_BP_PER_SIDE = (0, 5, 10, 20, 40) bp, gia' esistente
-in config.py, riusata cosi' com'e'.
+**Cost implementation (src/costs.py, a new module - does not weigh down
+src/returns.py, §5 is a protocol section distinct from §2.2):
+apply_round_trip_cost subtracts 4c from a pair's daily_payoff on the closing
+day of every completed round-trip (any reason: crossing, delisting,
+end_of_period all count as a complete 4-trade round-trip); applied in
+aggregation, src/trading.py unchanged. Grid c =
+config.COST_GRID_BP_PER_SIDE = (0, 5, 10, 20, 40) bp, already existing in
+config.py, reused as-is.
 
-**Risultati (notebooks/07_cost_grid.py, results/replication/cost_curve.json):**
-cross-check automatico c=0bp contro il Livello 1 (wait-one-day lordo)
-gia' pubblicato: coincide esattamente su tutte e 3 le finestre (conferma
-indipendente che l'applicazione del costo e la ricostruzione da trade log
-sono corrette). Break-even c*: Gate 1 = 16.8 bp/lato, Gate 2 full_universe
-= 5.9 bp/lato, Gate 2 golden_set_robustness = 6.7 bp/lato (interpolazione
-lineare tra i punti della griglia adiacenti al cambio di segno, nessuna
-estrapolazione forzata). Short costs (borrow +25bp/anno) NON modellati
-quantitativamente, dichiarati come limite testuale nel report, come
-richiesto dal protocollo stesso.
+**Results (notebooks/07_cost_grid.py, results/replication/cost_curve.json):**
+automatic cross-check of c=0bp against the already-published Level 1
+(wait-one-day gross): matches exactly across all 3 windows (independent
+confirmation that the cost application and the trade-log reconstruction are
+correct). Break-even c*: Gate 1 = 16.8 bp/side, Gate 2 full_universe = 5.9
+bp/side, Gate 2 golden_set_robustness = 6.7 bp/side (linear interpolation
+between the grid points adjacent to the sign change, no forced
+extrapolation). Short costs (borrow +25bp/year) NOT modeled quantitatively,
+declared as a textual limitation in the report, as the protocol itself
+requires.
 
-**Decisione:** nessun numero gia' pubblicato (Gate 1, Gate 2, H5, README)
-e' toccato da questo lavoro - la rigenerazione dei trade log e' additiva
-(nuovo dato persistito, stesso risultato) e verificata identica entro
-rumore macchina prima di essere usata per qualunque calcolo nuovo.
+**Decision:** no already-published number (Gate 1, Gate 2, H5, README) is
+touched by this work - the trade-log regeneration is additive (new data
+persisted, same result) and verified identical within machine noise before
+being used for any new computation.

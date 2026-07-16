@@ -21,8 +21,8 @@ regression's intercept absorbs exactly. Reusing one shared price
 representation across PCA/SSD/EG avoids requiring the caller to also load
 raw price levels separately for this module alone.
 
-OPTICS degeneracy threshold (PROTOCOL.md §9 names the failure modes -
-"tutto noise o un mega-cluster" - but not the exact trigger): declared
+OPTICS degeneracy threshold (PROTOCOL.md §8 names the failure modes -
+"all noise or one mega-cluster" - but not the exact trigger): declared
 here as noise_share > 80% OR the largest non-noise cluster holding > 50%
 of the non-noise points. Both thresholds are arbitrary defaults chosen to
 catch the two named failure modes and are documented, not tuned against
@@ -125,7 +125,7 @@ def cluster_tickers(
     """
     OPTICS primary (PROTOCOL.md §4/H5 step 3, ratified min_samples=3,
     xi=0.05), k-means/silhouette fallback if OPTICS degenerates
-    (_optics_is_degenerate; PROTOCOL.md §9 names the failure modes without
+    (_optics_is_degenerate; PROTOCOL.md §8 names the failure modes without
     fixing the trigger threshold, fixed and documented here). Neither
     algorithm is reimplemented by hand: sklearn.cluster.OPTICS /
     sklearn.cluster.KMeans / sklearn.metrics.silhouette_score.
